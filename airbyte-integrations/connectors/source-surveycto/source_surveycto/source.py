@@ -99,7 +99,7 @@ class SurveyctoStream(SurveyStream, IncrementalMixin):
 
         for data in self.response_json:
             try:
-                dateformat_in = "%b %d, %Y %I:%M:%S %p"
+                dateformat_in = "%b %d, %Y %H:%M:%S %p"
                 dateformat_out = "%Y-%m-%dT%H:%M:%S+00:00"
                 data["starttime"] = datetime.strptime(data["starttime"], dateformat_in).strftime(dateformat_out)
                 data["endtime"] = datetime.strptime(data["endtime"], dateformat_in).strftime(dateformat_out)
