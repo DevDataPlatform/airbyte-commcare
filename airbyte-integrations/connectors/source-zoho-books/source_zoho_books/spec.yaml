@@ -1,0 +1,23 @@
+documentation_url: https://www.zoho.com/books/api/v3/invoices/#overview
+connection_specification:
+  title: Zoho Books Spec
+  type: object
+  required:
+    - organization_id
+    - client_id
+    - client_secret
+    - refresh_token
+  additionalProperties: true
+  properties:
+    organization_id:
+      type: string
+      airbyte_secret: true
+    client_id:
+      type: string
+      airbyte_secret: true
+    client_secret:
+      type: string
+      airbyte_secret: true
+    refresh_token:
+      type: string
+      airbyte_secret: true

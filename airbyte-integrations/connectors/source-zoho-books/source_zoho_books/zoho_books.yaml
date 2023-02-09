@@ -1,0 +1,85 @@
+version: "0.1.0"
+
+definitions:
+  # schema_loader:
+  #   type: JsonSchema
+  #   file_path: "./source/schemas/{{ options['name'] }}.json"
+  selector:
+    type: RecordSelector
+    extractor:
+      type: DpathExtractor
+      field_pointer: ["invoices"]
+  requester:
+    url_base: "https://books.zoho.in/api/v3/"
+    type: HttpRequester
+    http_method: "GET"
+    request_options_provider:
+      request_parameters:
+        organization_id: "{{ config['organization_id'] }}"
+        sort_column: "invoice_number"
+        sort_order: "A"
+    authenticator:
+      type: "OAuthAuthenticator"
+      token_refresh_endpoint: "https://accounts.zoho.in/oauth/v2/token"
+      client_id: "{{ config['client_id'] }}"
+      client_secret: "{{ config['client_secret'] }}"
+      refresh_token: "{{ config['refresh_token'] }}"
+  retriever:
+    record_selector:
+      $ref: "*ref(definitions.selector)"
+    paginator:
+      type: "DefaultPaginator"
+      page_size_option:
+        inject_into: "request_parameter"
+        field_name: "per_page"
+      pagination_strategy:
+        type: "PageIncrement"
+        page_size: 10
+      page_token_option:
+        inject_into: "request_parameter"
+        field_name: "page"
+    requester:
+      $ref: "*ref(definitions.requester)"
+  base_stream:
+    retriever:
+      $ref: "*ref(definitions.retriever)"
+  invoices_stream:
+    $ref: "*ref(definitions.base_stream)"
+    $options:
+      url_base: "*ref(definitions.requester.url_base)"
+      name: "invoices"
+      path: "/invoices"
+
+streams:
+  - $ref: "*ref(definitions.invoices_stream)"
+
+check:
+  type: CheckStream
+  stream_names: ["invoices"]
+
+
+spec:
+  documentation_url: https://www.zoho.com/books/api/v3/invoices/#overview
+  connection_specification:
+    title: Zoho Books Spec
+    type: object
+    required:
+      - organization_id
+      - client_id
+      - client_secret
+      - refresh_token
+    additionalProperties: true
+    properties:
+      organization_id:
+        type: string
+        airbyte_secret: true
+      client_id:
+        type: string
+        airbyte_secret: true
+      client_secret:
+        type: string
+        airbyte_secret: true
+      refresh_token:
+        type: string
+        airbyte_secret: true
+          
