@@ -188,13 +188,18 @@ class Case(IncrementalStream):
 
     def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
         for record in super().read_records(*args, **kwargs):
+            date_string = record[self.cursor_field]
+            if "Z" in date_string:
+                 date_format = "%Y-%m-%dT%H:%M:%S.%fZ"  
+            else:
+                 date_format = "%Y-%m-%dT%H:%M:%S.%f"
             found = False
             for f in record["xform_ids"]:
                 if f in CommcareStream.forms:
                     found = True
                     break
             if found:
-                self._cursor_value = datetime.strptime(record[self.cursor_field], self.dateformat)
+                self._cursor_value = datetime.strptime(date_string, date_format)
                 # Make indexed_on tz aware
                 record.update({"streamname": "case", "indexed_on": record["indexed_on"] + "Z"})
                 # convert xform_ids field from array to comma separated list so flattening won't create
@@ -260,7 +265,12 @@ class Form(IncrementalStream):
 
     def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
         for record in super().read_records(*args, **kwargs):
-            self._cursor_value = datetime.strptime(record[self.cursor_field], self.dateformat)
+            date_string = record[self.cursor_field]
+            if "Z" in date_string:
+                 date_format = "%Y-%m-%dT%H:%M:%S.%fZ"  
+            else:
+                 date_format = "%Y-%m-%dT%H:%M:%S.%f"
+            self._cursor_value = datetime.strptime(date_string, date_format)
             CommcareStream.forms.add(record["id"])
             newform = self.scrubUnwantedFields(record)
             yield newform
