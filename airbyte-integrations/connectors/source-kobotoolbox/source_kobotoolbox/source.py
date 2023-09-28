@@ -24,9 +24,10 @@ stream_json_schema = {
                 "null",
             ]
         },
-        "endtime": {"type": ["string", "null"]}
+        "_submission_time": {"type": ["string", "null"]},
     },
 }
+
 
 class KoboToolStream(HttpStream, IncrementalMixin):
     primary_key = "_id"
@@ -40,11 +41,11 @@ class KoboToolStream(HttpStream, IncrementalMixin):
         self.auth_token = auth_token
         self.schema = schema
         self.stream_name = name
-        self.base_url = config['base_url']
+        self.base_url = config["base_url"]
         self.PAGINATION_LIMIT = pagination_limit
         self._cursor_value = None
         self.start_time = config["start_time"]
-        self.exclude_fields = config['exclude_fields'] if 'exclude_fields' in config else []
+        self.exclude_fields = config["exclude_fields"] if "exclude_fields" in config else []
 
     @property
     def url_base(self) -> str:
@@ -58,7 +59,7 @@ class KoboToolStream(HttpStream, IncrementalMixin):
         s = s.strip()
         return s if len(s) > 0 else self.form_id
 
-    # State will be a dict : {'endtime': '2023-03-15T00:00:00.000+05:30'}
+    # State will be a dict : {'_submission_time': '2023-03-15T00:00:00.000+05:30'}
 
     @property
     def state(self) -> Mapping[str, Any]:
@@ -77,7 +78,6 @@ class KoboToolStream(HttpStream, IncrementalMixin):
     def request_params(
         self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, any] = None, next_page_token: Mapping[str, Any] = None
     ) -> MutableMapping[str, Any]:
-
         params = {"start": 0, "limit": self.PAGINATION_LIMIT, "sort": json.dumps({self.cursor_field: 1})}
         params["query"] = json.dumps({self.cursor_field: {"$gte": self.state[self.cursor_field]}})
 
@@ -111,7 +111,9 @@ class KoboToolStream(HttpStream, IncrementalMixin):
             for to_remove_field in self.exclude_fields:
                 if to_remove_field in record:
                     record.pop(to_remove_field)
-            yield record
+            retval = {"_id": record["_id"], "data": record}
+            retval[self.cursor_field] = record[self.cursor_field]
+            yield retval
 
     def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
         for record in super().read_records(*args, **kwargs):
@@ -134,7 +136,7 @@ class SourceKobotoolbox(AbstractSource):
             return False, "password in credentials is not provided"
 
         return True, None
-    
+
     def get_access_token(self, config) -> Tuple[str, any]:
         token_url = f"{config['base_url']}/token/?format=json"
 
@@ -162,7 +164,6 @@ class SourceKobotoolbox(AbstractSource):
         return True, None
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
-
         # Fetch all assets(forms)
         url = f"{config['base_url']}/api/v2/assets.json"
         response = requests.get(url, auth=(config["username"], config["password"]))
@@ -177,7 +178,7 @@ class SourceKobotoolbox(AbstractSource):
         # Generate array of stream objects
         streams = []
         for form_dict in key_list:
-            if form_dict['has_deployment']:
+            if form_dict["has_deployment"]:
                 stream = KoboToolStream(
                     config=config,
                     form_id=form_dict["uid"],
@@ -187,5 +188,5 @@ class SourceKobotoolbox(AbstractSource):
                     auth_token=auth_token,
                 )
                 streams.append(stream)
-        
+
         return streams
