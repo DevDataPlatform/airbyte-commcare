@@ -24,6 +24,9 @@ stream_json_schema = {
                 "null",
             ]
         },
+        "data": {
+            "type": "object",
+        },
         "_submission_time": {"type": ["string", "null"]},
     },
 }
