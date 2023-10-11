@@ -24,7 +24,10 @@ stream_json_schema = {
                 "null",
             ]
         },
-        "endtime": {"type": ["string", "null"]},
+        "data": {
+            "type": "object",
+        },
+        "_submission_time": {"type": ["string", "null"]},
     },
 }
 
@@ -59,7 +62,7 @@ class KoboToolStream(HttpStream, IncrementalMixin):
         s = s.strip()
         return s if len(s) > 0 else self.form_id
 
-    # State will be a dict : {'endtime': '2023-03-15T00:00:00.000+05:30'}
+    # State will be a dict : {'_submission_time': '2023-03-15T00:00:00.000+05:30'}
 
     @property
     def state(self) -> Mapping[str, Any]:
@@ -111,7 +114,9 @@ class KoboToolStream(HttpStream, IncrementalMixin):
             for to_remove_field in self.exclude_fields:
                 if to_remove_field in record:
                     record.pop(to_remove_field)
-            yield record
+            retval = {"_id": record["_id"], "data": record}
+            retval[self.cursor_field] = record[self.cursor_field]
+            yield retval
 
     def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
         for record in super().read_records(*args, **kwargs):
