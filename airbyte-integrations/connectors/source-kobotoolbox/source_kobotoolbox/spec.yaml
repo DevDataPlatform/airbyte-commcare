@@ -39,5 +39,16 @@ connectionSpecification:
     exclude_fields:
       type: array
       title: Exclude Fields
-      description: Column names that you dont want to sync
+      description: Column names not to sync
       order: 5
+    forms_using_endtime:
+      type: array
+      title: Forms Using Endtime
+      description: List of forms that use endtime instead of submission time
+      order: 6
+    max_days_to_close:
+      type: integer
+      title: Max Days To Close
+      description: The maximum number of days between a form's submission date and end date, for those forms listed above
+      default: 30
+      order: 7
