@@ -6,7 +6,7 @@
 import json
 import re
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
-from abc import ABC, abstractmethod
+from abc import ABC
 from urllib.parse import parse_qsl, urlparse
 from datetime import datetime, timedelta
 
