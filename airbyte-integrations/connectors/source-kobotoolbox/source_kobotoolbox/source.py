@@ -231,7 +231,7 @@ class SourceKobotoolbox(AbstractSource):
         streams = []
         for form_dict in key_list:
             if form_dict["has_deployment"]:
-                if form_dict["name"] in config["forms_using_endtime"]:
+                if "forms_using_endtime" in config and form_dict["name"] in config["forms_using_endtime"]:
                     stream = KoboStreamEndTime(
                         config=config,
                         form_id=form_dict["uid"],
