@@ -95,6 +95,17 @@ class KoboToolStream(HttpStream, IncrementalMixin, ABC):
         """setter for state"""
         self._cursor_value = value[self.cursor_field]
 
+    def mk_tzaware_utc(self, dt):
+        """
+        add a utc-tzinfo object to the dt if it doesn't have tzinfo
+        if it has a tzinfo, convert to utc
+        """
+        from datetime import timezone
+
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
     def mk_query(self):
         """query using endtime"""
         if self.cursor_field == "_submission_time":
@@ -102,15 +113,8 @@ class KoboToolStream(HttpStream, IncrementalMixin, ABC):
         else:
             start_sub_time = datetime.fromisoformat(self.state[self.cursor_field])
             start_sub_time -= timedelta(days=self.max_days_to_close)
-            from datetime import timezone
-
-            tzaware_start_time = datetime.fromisoformat(self.start_time)
-            if tzaware_start_time.tzinfo is None:
-                # interpret as utc
-                tzaware_start_time = tzaware_start_time.replace(tzinfo=timezone.utc)
-            else:
-                # convert to utc if necessary
-                tzaware_start_time = tzaware_start_time.astimezone(timezone.utc)
+            start_sub_time = self.mk_tzaware_utc(start_sub_time)
+            tzaware_start_time = self.mk_tzaware_utc(datetime.fromisoformat(self.start_time))
             start_sub_time = max(start_sub_time, tzaware_start_time)
             return {"_submission_time": {"$gte": start_sub_time.isoformat()}, self.cursor_field: {"$gte": self.state[self.cursor_field]}}
 
@@ -168,10 +172,8 @@ class KoboToolStream(HttpStream, IncrementalMixin, ABC):
             retval["_submission_time"] = record["_submission_time"]
             retval["endtime"] = record.get("endtime")
             if retval["endtime"]:
-                from datetime import timezone
-
                 # endtime is in utc
-                endtime = datetime.fromisoformat(retval["endtime"]).astimezone(timezone.utc)
+                endtime = self.mk_tzaware_utc(datetime.fromisoformat(retval["endtime"]))
                 retval["endtime"] = endtime.isoformat()
             yield retval
 
