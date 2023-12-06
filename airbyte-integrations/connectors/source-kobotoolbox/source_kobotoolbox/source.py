@@ -196,6 +196,12 @@ class KoboStreamEndTime(KoboToolStream):
     cursor_field = "endtime"
 
 
+class KoboStreamEnd(KoboToolStream):
+    """KoboStreamEnd"""
+
+    cursor_field = "end"
+
+
 class SourceKobotoolbox(AbstractSource):
     """One instance per sync"""
 
@@ -251,6 +257,15 @@ class SourceKobotoolbox(AbstractSource):
             if form_dict["has_deployment"]:
                 if "forms_using_endtime" in config and form_dict["name"] in config["forms_using_endtime"]:
                     stream = KoboStreamEndTime(
+                        config=config,
+                        form_id=form_dict["uid"],
+                        schema=stream_json_schema,
+                        name=form_dict["name"],
+                        pagination_limit=self.PAGINATION_LIMIT,
+                        auth_token=auth_token,
+                    )
+                elif "forms_using_end" in config and form_dict["name"] in config["forms_using_end"]:
+                    stream = KoboStreamEnd(
                         config=config,
                         form_id=form_dict["uid"],
                         schema=stream_json_schema,

@@ -46,6 +46,11 @@ connectionSpecification:
       title: Forms Using Endtime
       description: List of forms that use endtime instead of submission time
       order: 6
+    forms_using_end:
+      type: array
+      title: Forms Using End
+      description: List of forms that use end instead of submission time
+      order: 6
     max_days_to_close:
       type: integer
       title: Max Days To Close
