@@ -172,6 +172,7 @@ class KoboToolStream(HttpStream, IncrementalMixin, ABC):
             retval = {"_id": record["_id"], "data": record}
             retval["_submission_time"] = record["_submission_time"]
             retval["endtime"] = record.get("endtime")
+            retval["end"] = record.get("end")
             if retval["endtime"]:
                 # endtime is in utc
                 endtime = self.mk_tzaware_utc(datetime.fromisoformat(retval["endtime"]))
