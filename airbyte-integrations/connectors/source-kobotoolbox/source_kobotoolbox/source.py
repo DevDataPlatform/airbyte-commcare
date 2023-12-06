@@ -30,6 +30,7 @@ stream_json_schema = {
             "type": "object",
         },
         "endtime": {"type": ["string", "null"]},
+        "end": {"type": ["string", "null"]},
         "_submission_time": {"type": ["string", "null"]},
     },
 }
