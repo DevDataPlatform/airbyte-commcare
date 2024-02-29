@@ -1,0 +1,766 @@
+type: DeclarativeSource
+version: 0.51.1
+spec:
+  type: Spec
+  connection_specification:
+    type: object
+    $schema: http://json-schema.org/draft-07/schema#
+    required:
+      - api_key
+    properties:
+      api_key:
+        type: string
+        order: 0
+        title: API Key
+        airbyte_secret: true
+    additionalProperties: true
+type: DeclarativeSource
+check:
+  type: CheckStream
+  stream_names:
+    - activities
+streams:
+  - name: activities
+    type: DeclarativeStream
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 10000
+      requester:
+        path: /lms/activities
+        type: HttpRequester
+        url_base: https://learning.atecf.org/api
+        http_method: GET
+        authenticator:
+          type: BearerAuthenticator
+          api_token: '{{ config[''api_key''] }}'
+        request_headers: {}
+        request_body_json: {}
+        request_parameters: {}
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - data
+            - result
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        properties:
+          id:
+            type: string
+          type:
+            type: string
+          actor:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              type:
+                type: string
+          object:
+            type: object
+            properties:
+              id:
+                type:
+                  - 'null'
+                  - number
+                  - string
+              name:
+                type:
+                  - 'null'
+                  - number
+                  - string
+              type:
+                type: string
+          target:
+            type: object
+            properties:
+              id:
+                type:
+                  - 'null'
+                  - string
+              name:
+                type:
+                  - 'null'
+                  - string
+              type:
+                type: string
+          actor_id:
+            type: string
+          template:
+            type: string
+          object_id:
+            type:
+              - 'null'
+              - number
+              - string
+          target_id:
+            type:
+              - 'null'
+              - string
+          created_date:
+            type: string
+          formatted_text:
+            type: string
+  - name: courses
+    type: DeclarativeStream
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 1000
+      requester:
+        path: /lms/courses
+        type: HttpRequester
+        url_base: https://learning.atecf.org/api
+        http_method: GET
+        authenticator:
+          type: BearerAuthenticator
+          api_token: '{{ config[''api_key''] }}'
+        request_headers: {}
+        request_body_json: {}
+        request_parameters: {}
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - data
+            - result
+    primary_key:
+      - course_id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        properties:
+          course_id:
+            type: string
+          course_url:
+            type: string
+          course_type:
+            type: string
+          course_alias:
+            type: string
+          course_image:
+            type: string
+          course_state:
+            type: string
+          course_title:
+            type: string
+          course_cat_id:
+            type: string
+          user_enrolled:
+            type: number
+          user_progress:
+            type: object
+          course_cat_title:
+            type: string
+          course_creator_id:
+            type: string
+          course_description:
+            type: string
+          course_no_of_likes:
+            type: number
+          enrolled_users_cnt:
+            type: number
+          course_creator_name:
+            type: string
+          course_no_of_dislikes:
+            type: number
+          course_subscription_plans:
+            type: array
+            items:
+              type: object
+              properties:
+                plan_id:
+                  type: string
+                plan_price:
+                  type: string
+                plan_duration:
+                  type: string
+                plan_time_measure:
+                  type: string
+  - name: course
+    type: DeclarativeStream
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: NoPagination
+      requester:
+        path: /lms/course/{{stream_partition.course_id}}
+        type: HttpRequester
+        url_base: https://learning.atecf.org/api
+        http_method: GET
+        authenticator:
+          type: BearerAuthenticator
+          api_token: '{{ config[''api_key''] }}'
+        request_headers: {}
+        request_body_json: {}
+        request_parameters: {}
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - data
+            - result
+      partition_router:
+        - type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              stream:
+                name: courses
+                type: DeclarativeStream
+                retriever:
+                  type: SimpleRetriever
+                  paginator:
+                    type: DefaultPaginator
+                    page_size_option:
+                      type: RequestOption
+                      field_name: limit
+                      inject_into: request_parameter
+                    pagination_strategy:
+                      type: OffsetIncrement
+                      page_size: 1000
+                  requester:
+                    path: /lms/courses
+                    type: HttpRequester
+                    url_base: https://learning.atecf.org/api
+                    http_method: GET
+                    authenticator:
+                      type: BearerAuthenticator
+                      api_token: '{{ config[''api_key''] }}'
+                    request_headers: {}
+                    request_body_json: {}
+                    request_parameters: {}
+                  record_selector:
+                    type: RecordSelector
+                    extractor:
+                      type: DpathExtractor
+                      field_path:
+                        - data
+                        - result
+                primary_key:
+                  - course_id
+                schema_loader:
+                  type: InlineSchemaLoader
+                  schema:
+                    type: object
+                    $schema: http://json-schema.org/schema#
+                    properties:
+                      course_id:
+                        type: string
+                      course_url:
+                        type: string
+                      course_type:
+                        type: string
+                      course_alias:
+                        type: string
+                      course_image:
+                        type: string
+                      course_state:
+                        type: string
+                      course_title:
+                        type: string
+                      course_cat_id:
+                        type: string
+                      user_enrolled:
+                        type: number
+                      user_progress:
+                        type: object
+                      course_cat_title:
+                        type: string
+                      course_creator_id:
+                        type: string
+                      course_description:
+                        type: string
+                      course_no_of_likes:
+                        type: number
+                      enrolled_users_cnt:
+                        type: number
+                      course_creator_name:
+                        type: string
+                      course_no_of_dislikes:
+                        type: number
+                      course_subscription_plans:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            plan_id:
+                              type: string
+                            plan_price:
+                              type: string
+                            plan_duration:
+                              type: string
+                            plan_time_measure:
+                              type: string
+              parent_key: course_id
+              partition_field: course_id
+    primary_key: []
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        properties:
+          id:
+            type: string
+          type:
+            type: string
+          alias:
+            type: string
+          catid:
+            type: string
+          image:
+            type: string
+          state:
+            type: string
+          title:
+            type: string
+          access:
+            type: string
+          expiry:
+            type: string
+          fields:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                note:
+                  type: string
+                type:
+                  type: string
+                label:
+                  type: string
+                state:
+                  type: string
+                title:
+                  type: string
+                value:
+                  type: string
+                access:
+                  type: string
+                params:
+                  type: object
+                  properties:
+                    class:
+                      type: string
+                    layout:
+                      type: string
+                    display:
+                      type: string
+                    show_on:
+                      type: string
+                    showlabel:
+                      type: string
+                    label_class:
+                      type: string
+                    render_class:
+                      type: string
+                    display_readonly:
+                      type: string
+                    label_render_class:
+                      type: string
+                context:
+                  type: string
+                group_id:
+                  type: string
+                language:
+                  type: string
+                ordering:
+                  type: string
+                rawvalue:
+                  type: array
+                  items:
+                    type: string
+                required:
+                  type: string
+                author_name:
+                  type: string
+                checked_out:
+                  type: string
+                description:
+                  type: string
+                fieldparams:
+                  type: object
+                  properties:
+                    options:
+                      type: object
+                      properties:
+                        options0:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                        options1:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                        options2:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                        options3:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                        options4:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                        options5:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                        options6:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                    multiple:
+                      type: number
+                access_level:
+                  type: string
+                created_time:
+                  type: string
+                default_value:
+                  type: string
+                created_user_id:
+                  type: string
+                checked_out_time:
+                  type: string
+          params:
+            type: object
+            properties:
+              cors:
+                type: string
+              secure:
+                type: number
+              esgroup:
+                type: object
+                properties:
+                  groupType:
+                    type: string
+                  coursegroup:
+                    type: string
+                  groupCategory:
+                    type: string
+              espoint:
+                type: object
+                properties:
+                  onAfterCourseCompletion:
+                    type: array
+                    items:
+                      type: string
+              esbadges:
+                type: string
+              menu_show:
+                type: number
+              menu_text:
+                type: number
+              allow_cors:
+                type: string
+              page_title:
+                type: string
+              access-view:
+                type: boolean
+              exclude_log:
+                type: string
+              force_output:
+                type: string
+              log_requests:
+                type: string
+              allow_headers:
+                type: string
+              request_limit:
+                type: string
+              page_description:
+                type: string
+              show_page_heading:
+                type: number
+          buy_url:
+            type:
+              - 'null'
+              - string
+          created:
+            type: string
+          metakey:
+            type: string
+          modules:
+            type: array
+            items:
+              type: object
+              properties:
+                lessons:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      source:
+                        type: string
+                      lesson_id:
+                        type: string
+                      can_access:
+                        type: object
+                        properties:
+                          success:
+                            type: number
+                          error_msg:
+                            type: string
+                      lesson_url:
+                        type: string
+                      lesson_icon:
+                        type: string
+                      lesson_alias:
+                        type: string
+                      lesson_image:
+                        type:
+                          - 'null'
+                          - string
+                      lesson_state:
+                        type: string
+                      lesson_title:
+                        type: string
+                      lesson_format:
+                        type: string
+                      consider_marks:
+                        type: string
+                      lesson_end_date:
+                        type: string
+                      lesson_course_id:
+                        type: string
+                      lesson_start_date:
+                        type: string
+                      lesson_sub_format:
+                        type: string
+                      lesson_description:
+                        type: string
+                      lesson_tracking_details:
+                        type: object
+                        properties:
+                          no_of_attempts_allowed:
+                            type: string
+                      lesson_user_tracking_details:
+                        type: object
+                        properties:
+                          score:
+                            type: string
+                          time_spent:
+                            type: number
+                          last_attempt_status:
+                            type: number
+                          no_of_attempts_done:
+                            type: number
+                          attempts_grading_status:
+                            type: string
+                module_id:
+                  type: string
+                module_title:
+                  type: string
+          storage:
+            type: string
+          allowBuy:
+            type: number
+          asset_id:
+            type: string
+          catState:
+            type: string
+          end_date:
+            type: string
+          enrolled:
+            type: number
+          featured:
+            type: string
+          group_id:
+            type: string
+          metadesc:
+            type: string
+          modified:
+            type: string
+          ordering:
+            type: string
+          canEnroll:
+            type: boolean
+          catAccess:
+            type: string
+          course_id:
+            type: string
+          userOrder:
+            type: string
+          course_cat:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+          created_by:
+            type: string
+          short_desc:
+            type: string
+          start_date:
+            type: string
+          allowEnroll:
+            type: number
+          checked_out:
+            type: string
+          course_type:
+            type: string
+          description:
+            type: string
+          course_alias:
+            type: string
+          course_likes:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                img_url:
+                  type: string
+                link_url:
+                  type: string
+                username:
+                  type: string
+          course_state:
+            type: string
+          course_title:
+            type: string
+          creator_name:
+            type: string
+          lesson_count:
+            type: number
+          originalImage:
+            type: string
+          user_progress:
+            type: object
+          certificate_id:
+            type: string
+          course_creator:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+          enrolled_users:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                avatar:
+                  type: string
+                user_id:
+                  type: string
+                user_name:
+                  type: string
+                profileurl:
+                  type: string
+                enrolled_on:
+                  type: string
+          userEnrollment:
+            type: object
+            properties:
+              params:
+                type: string
+              expired:
+                type: number
+              unlimited_plan:
+                type: string
+              after_expiry_mail:
+                type: string
+              before_expiry_mail:
+                type: string
+          orig_start_date:
+            type: string
+          certificate_term:
+            type: string
+          checked_out_time:
+            type: string
+          creator_username:
+            type: string
+          course_description:
+            type: string
+          course_no_of_likes:
+            type: number
+          course_no_of_dislikes:
+            type: number
+          course_subscription_plans:
+            type:
+              - array
+              - 'null'
+            items:
+              type: object
+              properties:
+                plan_id:
+                  type: string
+                plan_price:
+                  type: string
+                plan_duration:
+                  type: string
+                plan_time_measure:
+                  type: string
+version: 0.51.41
+metadata:
+  autoImportSchema:
+    course: true
+    courses: true
+    activities: false
