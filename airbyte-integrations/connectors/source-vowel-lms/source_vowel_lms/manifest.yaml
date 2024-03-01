@@ -1,5 +1,5 @@
 type: DeclarativeSource
-version: 0.51.1
+version: 0.51.41
 spec:
   type: Spec
   connection_specification:
@@ -14,7 +14,7 @@ spec:
         title: API Key
         airbyte_secret: true
     additionalProperties: true
-type: DeclarativeSource
+
 check:
   type: CheckStream
   stream_names:
@@ -758,7 +758,7 @@ streams:
                   type: string
                 plan_time_measure:
                   type: string
-version: 0.51.41
+
 metadata:
   autoImportSchema:
     course: true
