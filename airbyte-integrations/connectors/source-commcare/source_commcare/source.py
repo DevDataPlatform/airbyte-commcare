@@ -308,7 +308,11 @@ class SourceCommcare(AbstractSource):
         return {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
-            "properties": {"id": {"type": "string"}, "indexed_on": {"type": "string", "format": "date-time"}, "data": {"type": "object"}},
+            "properties": {
+                "id": {"type": "string"},
+                "indexed_on": {"type": "string", "format": "date-time", "airbyte_type": "timestamp_with_timezone"},
+                "data": {"type": "object"},
+            },
         }
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
