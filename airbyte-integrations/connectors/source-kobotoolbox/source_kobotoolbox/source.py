@@ -94,7 +94,8 @@ class KoboToolStream(HttpStream, IncrementalMixin, ABC):
     @state.setter
     def state(self, value: Mapping[str, Any]):
         """setter for state"""
-        self._cursor_value = value[self.cursor_field]
+        if self.cursor_field in value:
+            self._cursor_value = value[self.cursor_field]
 
     def mk_tzaware_utc(self, dt):
         """
