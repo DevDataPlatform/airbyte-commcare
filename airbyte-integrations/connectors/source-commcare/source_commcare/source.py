@@ -197,19 +197,18 @@ class Case(IncrementalStream):
 
     def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
         for record in super().read_records(*args, **kwargs):
-            if any(f in CommcareStream.forms for f in record["xform_ids"]):
-                self._cursor_value = parse_datetime_with_microseconds(record[self.cursor_field])
-                # Make indexed_on tz aware
-                record.update({"streamname": "case", "indexed_on": ensure_single_trailing_Z(record["indexed_on"])})
-                # convert xform_ids field from array to comma separated list so flattening won't create
-                # one field per item. This is because some cases have up to 2000 xform_ids and we don't want 2000 extra
-                # fields in the schema
-                record["xform_ids"] = ",".join(record["xform_ids"])
-                retval = {}
-                retval["id"] = record["id"]
-                retval["indexed_on"] = ensure_single_trailing_Z(record["indexed_on"])
-                retval["data"] = record
-                yield retval
+            self._cursor_value = parse_datetime_with_microseconds(record[self.cursor_field])
+            # Make indexed_on tz aware
+            record.update({"streamname": "case", "indexed_on": ensure_single_trailing_Z(record["indexed_on"])})
+            # convert xform_ids field from array to comma separated list so flattening won't create
+            # one field per item. This is because some cases have up to 2000 xform_ids and we don't want 2000 extra
+            # fields in the schema
+            record["xform_ids"] = ",".join(record["xform_ids"])
+            retval = {}
+            retval["id"] = record["id"]
+            retval["indexed_on"] = ensure_single_trailing_Z(record["indexed_on"])
+            retval["data"] = record
+            yield retval
 
         if self._cursor_value and self._cursor_value.microsecond == 0:
             # Airbyte state handling adjustment
