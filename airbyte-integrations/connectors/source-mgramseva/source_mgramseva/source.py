@@ -22,6 +22,11 @@ from airbyte_cdk.sources.streams.core import StreamData
 pytz.IST = pytz.timezone("Asia/Kolkata")
 
 
+def convert_to_date(x: int) -> datetime:
+    """convert a timestamp to a date"""
+    return datetime.fromtimestamp(x / 1000, pytz.UTC).astimezone(pytz.IST)
+
+
 # Basic full refresh stream
 class MgramsevaStream(HttpStream, ABC):
     """Base for all objects"""
@@ -105,6 +110,30 @@ class MgramsevaStream(HttpStream, ABC):
         return map(lambda x: {"data": x, "id": x["id"]}, response.json()[self.response_key])
 
 
+class MgramsevaDemand(MgramsevaStream):
+    """object for a single demand"""
+
+    def __init__(
+        self,
+        endpoint: str,
+        headers: dict,
+        request_info: dict,
+        user_request: dict,
+        params: dict,
+        response_key: str,
+        **kwargs,
+    ):
+        """call super"""
+        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+
+    def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
+        """include the bill date"""
+        demands = response.json()[self.response_key]
+        for demand in demands:
+            demand["demandDate"] = convert_to_date(demand["taxPeriodTo"]).strftime("%Y-%m-%d")
+        return map(lambda x: {"data": x, "id": x["id"]}, demands)
+
+
 class MgramsevaDemands(MgramsevaStream):
     """object for consumer demands"""
 
@@ -128,34 +157,20 @@ class MgramsevaDemands(MgramsevaStream):
     ) -> Iterable[StreamData]:
         """override"""
 
-        # ====================================================================================
-        # params = {
-        #     "tenantId": self.tenantid,
-        #     "businessService": "WS",
-        #     "periodFrom": int(1000 * self.fromdate.timestamp()),
-        #     "periodTo": int(1000 * self.todate.timestamp()),
-        # }
-        # stream = MgramsevaStream("billing-service/demand/_search", self.headers, self.request_info, self.user_request, params, "Demands")
-        # yield from stream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
-        # ====================================================================================
-
-        month_start = self.fromdate.replace(day=1)
+        month_start = self.fromdate
 
         while month_start < self.todate:
 
             next_month_start = month_start + relativedelta(months=1)
-            if next_month_start > self.todate:
-                next_month_start = self.todate
 
             params = {
                 "tenantId": self.tenantid,
                 "businessService": "WS",
                 "periodFrom": int(1000 * month_start.timestamp()),
-                "periodTo": int(1000 * next_month_start.timestamp()),
+                "periodTo": int(1000 * (next_month_start - timedelta(milliseconds=1)).timestamp()),
             }
-            self.logger.info(params)
 
-            stream = MgramsevaStream(
+            stream = MgramsevaDemand(
                 "billing-service/demand/_search", self.headers, self.request_info, self.user_request, params, "Demands"
             )
             yield from stream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
@@ -378,7 +393,9 @@ class SourceMgramseva(AbstractSource):
         # tenant_expenses_to = datetime.strptime(config.get("tenant_expenses_to", "2022-01-01"), "%Y-%m-%d")
 
         start_date = datetime.strptime(config.get("start_date", "2022-01-01"), "%Y-%m-%d")
+        start_date_month_start = start_date.replace(day=1)
         start_date = pytz.IST.localize(start_date).astimezone(pytz.utc)
+        start_date_month_start = pytz.IST.localize(start_date_month_start).astimezone(pytz.utc)
         end_date = datetime.today()
         end_date = pytz.IST.localize(end_date).astimezone(pytz.utc)
 
@@ -387,12 +404,14 @@ class SourceMgramseva(AbstractSource):
             streams = [
                 MgramsevaPayments(self.headers, self.request_info, self.user_request, tenantid),
                 MgramsevaTenantExpenses(self.headers, self.request_info, self.user_request, tenantid, start_date, end_date),
-                MgramsevaDemands(self.headers, self.request_info, self.user_request, tenantid, start_date, end_date),
+                MgramsevaDemands(self.headers, self.request_info, self.user_request, tenantid, start_date_month_start, end_date),
             ]
 
             # and now we need bills for each consumer
             consumer_codes = set()
-            tmp_demand_stream = MgramsevaDemands(self.headers, self.request_info, self.user_request, tenantid, start_date, end_date)
+            tmp_demand_stream = MgramsevaDemands(
+                self.headers, self.request_info, self.user_request, tenantid, start_date_month_start, end_date
+            )
             for demand in tmp_demand_stream.read_records(SyncMode.full_refresh):
                 consumer_codes.add(demand["data"]["consumerCode"])
 
