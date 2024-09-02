@@ -349,9 +349,11 @@ class SourceMgramseva(AbstractSource):
         end_date = datetime.today()
         end_date = pytz.IST.localize(end_date).astimezone(pytz.utc)
 
+        streams = []
+
         for tenantid in self.config["tenantids"]:
             # Generate streams for each object type
-            streams = [
+            streams += [
                 MgramsevaPayments(self.headers, self.request_info, self.user_request, tenantid),
                 MgramsevaTenantExpenses(self.headers, self.request_info, self.user_request, tenantid, start_date, end_date),
                 MgramsevaDemands(self.headers, self.request_info, self.user_request, tenantid),
@@ -365,4 +367,4 @@ class SourceMgramseva(AbstractSource):
 
             streams.append(MgramsevaBills(self.headers, self.request_info, self.user_request, tenantid, list(consumer_codes)))
 
-            return streams
+        return streams
