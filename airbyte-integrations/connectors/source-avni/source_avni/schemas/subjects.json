@@ -56,6 +56,12 @@
       ],
       "additionalProperties": true
     },
+    "Location ID": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "relatives": {
       "type": [
         "null",
