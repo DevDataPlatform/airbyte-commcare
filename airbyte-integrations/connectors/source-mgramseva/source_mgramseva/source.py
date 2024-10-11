@@ -273,22 +273,14 @@ class MgramsevaPayments(MgramsevaStream):
     """object for consumer payments"""
 
     def __init__(
-        self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, **kwargs
+        self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, consumer_codes: dict, **kwargs
     ):  # pylint: disable=super-init-not-called
         """specify endpoint for payments and call super"""
         self.headers = headers
         self.request_info = request_info
         self.user_request = user_request
         self.tenantid_list = tenantid_list
-
-        self.consumer_codes = {}
-        for tenantid in self.tenantid_list:
-            self.consumer_codes[tenantid] = set()
-            tmp_demand_stream = MgramsevaDemands(self.headers, self.request_info, self.user_request, [tenantid])
-            for demand in tmp_demand_stream.read_records(SyncMode.full_refresh):
-                consumercode = demand["data"]["consumerCode"]
-                self.logger.info("adding %s %s", tenantid, consumercode)
-                self.consumer_codes[tenantid].add(demand["data"]["consumerCode"])
+        self.consumer_codes = consumer_codes
 
     def read_records(
         self,
@@ -448,6 +440,8 @@ class SourceMgramseva(AbstractSource):
         streams.append(
             MgramsevaBills(self.headers, self.request_info, self.user_request, self.config["tenantids"], tenantid_to_consumer_codes)
         )
-        streams.append(MgramsevaPayments(self.headers, self.request_info, self.user_request, self.config["tenantids"]))
+        streams.append(
+            MgramsevaPayments(self.headers, self.request_info, self.user_request, self.config["tenantids"], tenantid_to_consumer_codes)
+        )
 
         return streams
