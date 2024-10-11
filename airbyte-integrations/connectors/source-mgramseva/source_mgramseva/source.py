@@ -301,7 +301,7 @@ class MgramsevaPayments(MgramsevaStream):
 
         for tenantid in self.tenantid_list:
             for consumer_code in self.consumer_codes[tenantid]:
-                params = {"tenantId": tenantid, "businessService": "WS", "consumerCode": consumer_code}
+                params = {"tenantId": tenantid, "businessService": "WS", "consumerCodes": consumer_code}
                 self.logger.info("requesting payments for %s", consumer_code)
                 paymentstream = MgramsevaStream(
                     "collection-services/payments/WS/_search", self.headers, self.request_info, self.user_request, params, "Payments"
