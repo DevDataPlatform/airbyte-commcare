@@ -294,7 +294,7 @@ class MgramsevaPayments(MgramsevaStream):
         for tenantid in self.tenantid_list:
             for consumer_code in self.consumer_codes[tenantid]:
                 params = {"tenantId": tenantid, "businessService": "WS", "consumerCodes": consumer_code}
-                self.logger.info("requesting payments for %s", consumer_code)
+                # self.logger.info("requesting payments for %s", consumer_code)
                 paymentstream = MgramsevaStream(
                     "collection-services/payments/WS/_search", self.headers, self.request_info, self.user_request, params, "Payments"
                 )
@@ -429,7 +429,7 @@ class SourceMgramseva(AbstractSource):
             MgramsevaDemands(self.headers, self.request_info, self.user_request, self.config["tenantids"]),
         ]
 
-        # and now we need bills for each consumer
+        # bills and payments require a list of consumer codes for each tenant
         tenantid_to_consumer_codes = {}
         for tenantid in self.config["tenantids"]:
             tenantid_to_consumer_codes[tenantid] = set()
