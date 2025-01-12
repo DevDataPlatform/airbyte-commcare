@@ -1,13 +1,12 @@
 #
-# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2025 Airbyte, Inc., all rights reserved.
 #
 
 
 import sys
 
 from airbyte_cdk.entrypoint import launch
-from source_surveycto import SourceSurveycto
-
+from .source import SourceSurveycto
 
 def run():
     source = SourceSurveycto()

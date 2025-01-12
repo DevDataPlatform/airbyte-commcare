@@ -2,7 +2,7 @@
   "streams": [
     {
       "stream": {
-        "name": "baseline_ig",
+        "name": "survey_cto",
         "json_schema": {},
         "supported_sync_modes": ["full_refresh", "incremental"],
         "source_defined_cursor": true,

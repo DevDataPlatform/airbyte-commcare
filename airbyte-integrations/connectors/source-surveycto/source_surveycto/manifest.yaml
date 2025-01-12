@@ -1,0 +1,323 @@
+version: 0.90.0
+
+type: DeclarativeSource
+
+check:
+  type: CheckStream
+  stream_names:
+    - survey_cto
+
+definitions:
+  streams:
+    survey_cto:
+      type: DeclarativeStream
+      name: survey_cto
+      primary_key:
+        - KEY
+      retriever:
+        type: SimpleRetriever
+        requester:
+          $ref: "#/definitions/base_requester"
+          path: "{{ stream_partition['form_id'] }}"
+          http_method: GET
+        record_selector:
+          type: RecordSelector
+          extractor:
+            type: CustomRecordExtractor
+            class_name: source_surveycto.components.CustomExtractor
+        partition_router:
+          type: ListPartitionRouter
+          values: "{{ config['form_ids'] }}"
+          cursor_field: form_id
+      incremental_sync:
+        type: DatetimeBasedCursor
+        cursor_field: SubmissionDate
+        cursor_datetime_formats:
+          - "%b %d, %Y %H:%M:%S %p"
+        datetime_format: "%b %d, %Y %H:%M:%S %p"
+        start_datetime:
+          type: MinMaxDatetime
+          datetime: "{{ config[\"start_date\"] }}"
+          datetime_format: "%b %d, %Y %H:%M:%S %p"
+        start_time_option:
+          type: RequestOption
+          inject_into: request_parameter
+          field_name: date
+        end_datetime:
+          type: MinMaxDatetime
+          datetime: "{{ now_utc().strftime('%b %d, %Y %H:%M:%S %p') }}"
+          datetime_format: "%b %d, %Y %H:%M:%S %p"
+      schema_loader:
+        type: InlineSchemaLoader
+        schema:
+          $ref: "#/schemas/survey_cto"
+  base_requester:
+    type: HttpRequester
+    url_base: >-
+      https://{{ config['server_name']
+      }}.surveycto.com/api/v2/forms/data/wide/json/
+    authenticator:
+      type: BasicHttpAuthenticator
+      password: "{{ config[\"password\"] }}"
+      username: "{{ config[\"username\"] }}"
+
+streams:
+  - $ref: "#/definitions/streams/survey_cto"
+
+spec:
+  type: Spec
+  connection_specification:
+    type: object
+    $schema: http://json-schema.org/draft-07/schema#
+    required:
+      - server_name
+      - form_ids
+      - start_date
+      - username
+      - password
+    properties:
+      server_name:
+        type: string
+        description: The name of the SurveryCTO server
+        order: 0
+        title: Server Name
+      form_ids:
+        type: array
+        description: Unique identifier for one of your forms
+        order: 1
+        title: Form Id's
+      start_date:
+        type: string
+        description: "initial date for survey cto. Example: Jan 09, 2022 00:00:00 AM"
+        order: 2
+        title: Start Date
+        default: Jan 09, 2022 00:00:00 AM
+        pattern: ^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]{2}, [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$
+      username:
+        type: string
+        order: 3
+        title: Username
+      password:
+        type: string
+        order: 4
+        title: Password
+        always_show: true
+        airbyte_secret: true
+    additionalProperties: true
+
+metadata:
+  autoImportSchema:
+    survey_cto: true
+  testedStreams:
+    survey_cto:
+      hasRecords: true
+      streamHash: bfcd9834d282935e9091858d0774a8a14007dde1
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+  assist: {}
+
+schemas:
+  survey_cto:
+    type: object
+    $schema: http://json-schema.org/schema#
+    additionalProperties: true
+    properties:
+      KEY:
+        type:
+          - string
+          - "null"
+      SubmissionDate:
+        type:
+          - string
+          - "null"
+      data:
+        type:
+          - object
+          - "null"
+        properties:
+          CompletionDate:
+            type:
+              - string
+              - "null"
+          KEY:
+            type:
+              - string
+              - "null"
+          SubmissionDate:
+            type:
+              - string
+              - "null"
+          c1:
+            type:
+              - string
+              - "null"
+          c1a:
+            type:
+              - string
+              - "null"
+          c2:
+            type:
+              - string
+              - "null"
+          c2a:
+            type:
+              - string
+              - "null"
+          c3:
+            type:
+              - string
+              - "null"
+          caseid:
+            type:
+              - string
+              - "null"
+          date:
+            type:
+              - string
+              - "null"
+          device_info:
+            type:
+              - string
+              - "null"
+          deviceid:
+            type:
+              - string
+              - "null"
+          devicephonenum:
+            type:
+              - string
+              - "null"
+          district_tn:
+            type:
+              - string
+              - "null"
+          duration:
+            type:
+              - string
+              - "null"
+          e1:
+            type:
+              - string
+              - "null"
+          e2:
+            type:
+              - string
+              - "null"
+          endtime:
+            type:
+              - string
+              - "null"
+          expected:
+            type:
+              - string
+              - "null"
+          facilitator_gender:
+            type:
+              - string
+              - "null"
+          facilitator_role:
+            type:
+              - string
+              - "null"
+          femalepresent:
+            type:
+              - string
+              - "null"
+          formdef_version:
+            type:
+              - string
+              - "null"
+          forms:
+            type:
+              - string
+              - "null"
+          instanceID:
+            type:
+              - string
+              - "null"
+          malepresent:
+            type:
+              - string
+              - "null"
+          n1:
+            type:
+              - string
+              - "null"
+          n2:
+            type:
+              - string
+              - "null"
+          n3:
+            type:
+              - string
+              - "null"
+          n4:
+            type:
+              - string
+              - "null"
+          n_seca:
+            type:
+              - string
+              - "null"
+          observation_term:
+            type:
+              - string
+              - "null"
+          observer_gender:
+            type:
+              - string
+              - "null"
+          observer_role:
+            type:
+              - string
+              - "null"
+          programme:
+            type:
+              - string
+              - "null"
+          review_quality:
+            type:
+              - string
+              - "null"
+          review_status:
+            type:
+              - string
+              - "null"
+          s1:
+            type:
+              - string
+              - "null"
+          s2:
+            type:
+              - string
+              - "null"
+          s4:
+            type:
+              - string
+              - "null"
+          se3:
+            type:
+              - string
+              - "null"
+          se4:
+            type:
+              - string
+              - "null"
+          se5:
+            type:
+              - string
+              - "null"
+          starttime:
+            type:
+              - string
+              - "null"
+          username:
+            type:
+              - string
+              - "null"
+      endtime:
+        type:
+          - string
+          - "null"

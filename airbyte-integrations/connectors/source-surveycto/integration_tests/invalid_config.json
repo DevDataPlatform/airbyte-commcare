@@ -1,7 +1,7 @@
 {
-  "form_id": "wrong form_id",
-  "server_name": "This has the wrong server_name",
-  "username": "This has the wrong format (email)",
-  "password": "This has the wrong password",
-  "start_date": "This has the wrong format"
+  "form_id": ["survey cto form_id"],
+  "server_name": "server name for the survey cto",
+  "username": "username for the surveycto",
+  "password": "password",
+  "start_date": "pulling the data from this date"
 }
