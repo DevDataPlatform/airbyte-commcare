@@ -7,7 +7,7 @@ For information about how to use this connector within Airbyte, see [the documen
 
 ### Prerequisites
 
-* Python (`^3.9`)
+* Python (`^3.10`)
 * Poetry (`^1.7`) - installation instructions [here](https://python-poetry.org/docs/#installation)
 
 
@@ -50,7 +50,7 @@ poetry run pytest tests
 1. Install [`airbyte-ci`](https://github.com/airbytehq/airbyte/blob/master/airbyte-ci/connectors/pipelines/README.md)
 2. Run the following command to build the docker image:
 ```bash
-PATH=$PATH:~/.local/bin/ airbyte-ci --disable-update-check --disable-auto-update  connectors --name=source-mgramseva build
+airbyte-ci connectors --name=source-mgramseva build
 ```
 
 An image will be available on your host with the tag `airbyte/source-mgramseva:dev`.
