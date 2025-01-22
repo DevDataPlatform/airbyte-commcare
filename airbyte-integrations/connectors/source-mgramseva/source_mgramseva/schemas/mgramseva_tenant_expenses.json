@@ -7,6 +7,9 @@
     },
     "data": {
       "type": "object"
+    },
+    "toDate":{
+      "type": "string"
     }
   }
 }

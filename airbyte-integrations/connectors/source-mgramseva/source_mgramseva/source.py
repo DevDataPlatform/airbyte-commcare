@@ -15,7 +15,7 @@ import requests
 import pytz
 from airbyte_cdk.models import SyncMode
 from airbyte_cdk.sources import AbstractSource
-from airbyte_cdk.sources.streams import Stream
+from airbyte_cdk.sources.streams import Stream, CheckpointMixin
 from airbyte_cdk.sources.streams.http import HttpStream
 from airbyte_cdk.sources.streams.core import StreamData
 
@@ -216,12 +216,15 @@ class MgramsevaTenantExpense(MgramsevaStream):
         expenses["toDate"] = self.month_end.strftime("%Y-%m-%d")
         combined_string = f"{self.tenantid}{expenses['fromDate']}{expenses['toDate']}"
         id_hash = hashlib.sha256(combined_string.encode())
-        return [{"data": expenses, "id": id_hash.hexdigest()}]
+        return [{"data": expenses, "id": id_hash.hexdigest(),"toDate":expenses["toDate"]}]
 
 
-class MgramsevaTenantExpenses(MgramsevaStream):
+class MgramsevaTenantExpenses(MgramsevaStream, CheckpointMixin):
     """object for tenant payments"""
 
+    cursor_field = "toDate"
+    _cursor_value = None
+    
     def __init__(
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, fromdate: datetime, todate: datetime, **kwargs
     ):  # pylint: disable=super-init-not-called
@@ -234,8 +237,20 @@ class MgramsevaTenantExpenses(MgramsevaStream):
         self.request_info = request_info
         self.user_request = user_request
         self.tenantid_list = tenantid_list
-        self.fromdate = fromdate
-        self.todate = todate
+        self.fromdate = fromdate.replace(hour=0, minute=0, second=0, microsecond=0)
+        self.todate = todate.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    @property
+    def state(self) -> Mapping[str, Any]:
+        if self._cursor_value:
+            return {self.cursor_field: str(self._cursor_value)}
+        else:
+            return {self.cursor_field: str(self.fromdate)}
+
+    @state.setter
+    def state(self, value: Mapping[str, Any]):
+        if self.cursor_field in value:
+            self._cursor_value = value[self.cursor_field]
 
     def read_records(
         self,
@@ -248,12 +263,15 @@ class MgramsevaTenantExpenses(MgramsevaStream):
 
         for tenantid in self.tenantid_list:
 
-            month_start = self.fromdate.replace(day=1)
+            state_value = self.state[self.cursor_field]
 
-            while month_start < self.todate:
+            month_start = datetime.fromisoformat(state_value).replace(day=1)
 
-                next_month_start = month_start + relativedelta(months=1) - timedelta(milliseconds=1)
+            to_date = self.todate.replace(day=1)
 
+            while month_start < to_date:
+
+                next_month_start = month_start + relativedelta(months=1)
                 stream = MgramsevaTenantExpense(
                     "echallan-services/eChallan/v1/_expenseDashboard",
                     self.headers,
@@ -261,12 +279,14 @@ class MgramsevaTenantExpenses(MgramsevaStream):
                     self.user_request,
                     tenantid,
                     month_start,
-                    next_month_start,
+                    next_month_start - timedelta(milliseconds=1),
                     "ExpenseDashboard",
                 )
-                yield from stream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
-
+                for record in stream.read_records(sync_mode, cursor_field, stream_slice, stream_state):
+                    yield record
                 month_start = next_month_start
+        
+        self._cursor_value = str(self.todate.replace(day=1))
 
 
 class MgramsevaPayments(MgramsevaStream):
