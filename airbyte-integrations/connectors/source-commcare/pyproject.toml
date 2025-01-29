@@ -20,7 +20,7 @@ python = "^3.10,<3.12"
 flatten-json = "==0.1.13"
 bigquery-schema-generator = "==1.5.1"
 gbqschema-converter = "==1.2.1"
-airbyte-cdk = "^6.13.0"
+airbyte-cdk = "6.13.0"
 
 [tool.poetry.scripts]
 source-commcare = "source_commcare.run:run"
