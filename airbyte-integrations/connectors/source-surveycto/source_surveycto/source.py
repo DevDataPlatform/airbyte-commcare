@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2025 Airbyte, Inc., all rights reserved.
 #
 
 
@@ -8,20 +8,38 @@ from abc import ABC
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 
 import requests
-
 from airbyte_cdk.models import SyncMode
 from airbyte_cdk.sources import AbstractSource
-from airbyte_cdk.sources.streams import IncrementalMixin, Stream
+from airbyte_cdk.sources.streams import CheckpointMixin, Stream
 from airbyte_cdk.sources.streams.http import HttpStream
 from airbyte_cdk.sources.utils.transform import TransformConfig, TypeTransformer
 
-from .helpers import Helpers
+
+stream_json_schema = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "additionalProperties": True,
+    "properties": {
+        "KEY": {
+            "type": [
+                "string",
+                "null",
+            ]
+        },
+        "endtime": {"type": ["string", "null"]},
+        "data": {
+            "type": "object",
+        },
+        "SubmissionDate": {"type": ["string", "null"]},
+    },
+}
 
 
 class SurveyStream(HttpStream, ABC):
     transformer: TypeTransformer = TypeTransformer(TransformConfig.DefaultSchemaNormalization)
 
     def __init__(self, config: Mapping[str, Any], form_id, schema, **kwargs):
+        self.form_id = None
         super().__init__()
 
         self.config = config
@@ -46,7 +64,7 @@ class SurveyStream(HttpStream, ABC):
         return {}
 
 
-class SurveyctoStream(SurveyStream, IncrementalMixin):
+class SurveyctoStream(SurveyStream, CheckpointMixin):
     primary_key = "KEY"
     cursor_field = "SubmissionDate"
     _cursor_value = None
@@ -60,11 +78,12 @@ class SurveyctoStream(SurveyStream, IncrementalMixin):
 
     @state.setter
     def state(self, value: Mapping[str, Any]):
-        self._cursor_value = value[self.cursor_field]
+        if self.cursor_field in value:
+            self._cursor_value = value[self.cursor_field]
 
     @property
     def name(self) -> str:
-        return self.form_id
+        return getattr(self, 'form_id', 'Surveyctostream')
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         return None
@@ -95,13 +114,17 @@ class SurveyctoStream(SurveyStream, IncrementalMixin):
     ) -> Iterable[Mapping]:
         self.response_json = response.json()
 
-        for data in self.response_json:
-            try:
-                yield data
-            except Exception as e:
-                msg = "Encountered an exception parsing schema"
-                self.logger.exception(msg)
-                raise e
+        for record in self.response_json:
+            # send data, key, submission date and endtime
+            record_id = record.get("KEY")
+            submission_date = record.get("SubmissionDate")
+            endtime = record.get("endtime")
+
+            retval = {"KEY": record_id, "data": record}
+            retval["SubmissionDate"] = submission_date
+            retval["endtime"] = endtime
+
+            yield retval
 
     def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
         for record in super().read_records(*args, **kwargs):
@@ -112,14 +135,12 @@ class SurveyctoStream(SurveyStream, IncrementalMixin):
 # Source
 class SourceSurveycto(AbstractSource):
     def check_connection(self, logger, config) -> Tuple[bool, Any]:
+
         form_ids = config["form_id"]
 
         try:
             for form_id in form_ids:
-                schema = Helpers.call_survey_cto(config, form_id)
-                filter_data = Helpers.get_filter_data(schema)
-                schema_res = Helpers.get_json_schema(filter_data)
-                stream = SurveyctoStream(config=config, form_id=form_id, schema=schema_res)
+                stream = SurveyctoStream(config=config, form_id=form_id, schema=stream_json_schema)
                 next(stream.read_records(sync_mode=SyncMode.full_refresh))
 
             return True, None
@@ -132,10 +153,7 @@ class SourceSurveycto(AbstractSource):
         streams = []
 
         for form_id in forms:
-            schema = Helpers.call_survey_cto(config, form_id)
-            filter_data = Helpers.get_filter_data(schema)
-            schema_res = Helpers.get_json_schema(filter_data)
-            stream = SurveyctoStream(config=config, form_id=form_id, schema=schema_res)
+            stream = SurveyctoStream(config=config, form_id=form_id, schema=stream_json_schema)
             streams.append(stream)
         return streams
 
