@@ -1,0 +1,10 @@
+{
+  "client_user": "client_user",
+  "base_url": "base_url",
+  "username": "username",
+  "password": "password",
+  "start_date": "start_date",
+  "tenantids": [
+    "id_1","id_2"
+  ]
+}
