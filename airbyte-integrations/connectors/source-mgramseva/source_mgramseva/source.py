@@ -273,13 +273,14 @@ class MgramsevaPayments(MgramsevaStream):
     """object for consumer payments"""
 
     def __init__(
-        self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, **kwargs
+        self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, consumer_codes: dict, **kwargs
     ):  # pylint: disable=super-init-not-called
         """specify endpoint for payments and call super"""
         self.headers = headers
         self.request_info = request_info
         self.user_request = user_request
         self.tenantid_list = tenantid_list
+        self.consumer_codes = consumer_codes
 
     def read_records(
         self,
@@ -291,11 +292,13 @@ class MgramsevaPayments(MgramsevaStream):
         """override"""
 
         for tenantid in self.tenantid_list:
-            params = {"tenantId": tenantid, "businessService": "WS"}
-            paymentstream = MgramsevaStream(
-                "collection-services/payments/WS/_search", self.headers, self.request_info, self.user_request, params, "Payments"
-            )
-            yield from paymentstream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
+            for consumer_code in self.consumer_codes[tenantid]:
+                params = {"tenantId": tenantid, "businessService": "WS", "consumerCodes": consumer_code}
+                # self.logger.info("requesting payments for %s", consumer_code)
+                paymentstream = MgramsevaStream(
+                    "collection-services/payments/WS/_search", self.headers, self.request_info, self.user_request, params, "Payments"
+                )
+                yield from paymentstream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
 
 
 class MgramsevaWaterConnections(MgramsevaStream):
@@ -421,13 +424,12 @@ class SourceMgramseva(AbstractSource):
 
         # Generate streams for each object type
         streams = [
-            MgramsevaPayments(self.headers, self.request_info, self.user_request, self.config["tenantids"]),
             MgramsevaWaterConnections(self.headers, self.request_info, self.user_request, self.config["tenantids"]),
             MgramsevaTenantExpenses(self.headers, self.request_info, self.user_request, self.config["tenantids"], start_date, end_date),
             MgramsevaDemands(self.headers, self.request_info, self.user_request, self.config["tenantids"]),
         ]
 
-        # and now we need bills for each consumer
+        # bills and payments require a list of consumer codes for each tenant
         tenantid_to_consumer_codes = {}
         for tenantid in self.config["tenantids"]:
             tenantid_to_consumer_codes[tenantid] = set()
@@ -437,6 +439,9 @@ class SourceMgramseva(AbstractSource):
 
         streams.append(
             MgramsevaBills(self.headers, self.request_info, self.user_request, self.config["tenantids"], tenantid_to_consumer_codes)
+        )
+        streams.append(
+            MgramsevaPayments(self.headers, self.request_info, self.user_request, self.config["tenantids"], tenantid_to_consumer_codes)
         )
 
         return streams
