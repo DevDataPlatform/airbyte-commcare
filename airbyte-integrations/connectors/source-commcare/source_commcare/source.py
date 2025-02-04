@@ -10,7 +10,7 @@ from urllib.parse import parse_qs
 import requests
 from airbyte_cdk.models import SyncMode
 from airbyte_cdk.sources import AbstractSource
-from airbyte_cdk.sources.streams import IncrementalMixin, Stream
+from airbyte_cdk.sources.streams import CheckpointMixin, Stream
 from airbyte_cdk.sources.streams.http import HttpStream
 from airbyte_cdk.sources.streams.http.requests_native_auth import TokenAuthenticator
 
@@ -109,7 +109,7 @@ class Application(CommcareStream):
         yield response.json()
 
 
-class IncrementalStream(CommcareStream, IncrementalMixin):
+class IncrementalStream(CommcareStream, CheckpointMixin):
     cursor_field = "indexed_on"
     _cursor_value = None
 
