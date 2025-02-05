@@ -77,20 +77,7 @@ class MgramsevaStream(HttpStream, ABC):
         return {"RequestInfo": self.request_info, "userInfo": self.user_request}
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        """
-        TODO: Override this method to define a pagination strategy. If you will not be using pagination, no action is required - just return None.
 
-        This method should return a Mapping (e.g: dict) containing whatever information required to make paginated requests. This dict is passed
-        to most other methods in this class to help you form headers, request bodies, query params, etc..
-
-        For example, if the API accepts a 'page' parameter to determine which page of the result to return, and a response from the API contains a
-        'page' number, then this method should probably return a dict {'page': response.json()['page'] + 1} to increment the page count by 1.
-        The request_params method should then read the input next_page_token and set the 'page' param to next_page_token['page'].
-
-        :param response: the most recent response from the API
-        :return If there is another page in the result, a mapping (e.g: dict) containing information needed to query the next page in the response.
-                If there are no more pages in the result, return None.
-        """
         return None
 
     def request_params(
@@ -108,7 +95,7 @@ class MgramsevaStream(HttpStream, ABC):
         """
         # self.logger.info(response.json())
         return map(lambda x: {"data": x, "id": x["id"]}, response.json()[self.response_key])
-
+    
 
 class MgramsevaDemands(MgramsevaStream):
     """object for consumer demands"""
@@ -275,30 +262,44 @@ class MgramsevaPayments(MgramsevaStream):
     def __init__(
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, consumer_codes: dict, **kwargs
     ):  # pylint: disable=super-init-not-called
-        """specify endpoint for payments and call super"""
-        self.headers = headers
-        self.request_info = request_info
-        self.user_request = user_request
+
+        endpoint = "collection-services/payments/WS/_search"  
+        params = {}  
+        response_key = "Payments"  
+        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        self.tenant_index = 0  
+        self.consumer_index = 0 
         self.tenantid_list = tenantid_list
         self.consumer_codes = consumer_codes
+        
+    def get_next_params(self) -> Optional[Mapping[str, Any]]:
+        """Returns the next available parameters (used for both first and subsequent requests)."""
+        while self.tenant_index < len(self.tenantid_list):  
+            tenantid = self.tenantid_list[self.tenant_index]
+            consumer_list = self.consumer_codes.get(tenantid, [])
 
-    def read_records(
-        self,
-        sync_mode: SyncMode,
-        cursor_field: Optional[List[str]] = None,
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        stream_state: Optional[Mapping[str, Any]] = None,
-    ) -> Iterable[StreamData]:
-        """override"""
+            if self.consumer_index < len(consumer_list):
+                consumer_code = consumer_list[self.consumer_index]
+                self.consumer_index += 1
+                next_params = {"tenantId": tenantid, "businessService": "WS", "consumerCodes": consumer_code}
+                return next_params
 
-        for tenantid in self.tenantid_list:
-            for consumer_code in self.consumer_codes[tenantid]:
-                params = {"tenantId": tenantid, "businessService": "WS", "consumerCodes": consumer_code}
-                # self.logger.info("requesting payments for %s", consumer_code)
-                paymentstream = MgramsevaStream(
-                    "collection-services/payments/WS/_search", self.headers, self.request_info, self.user_request, params, "Payments"
-                )
-                yield from paymentstream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
+            self.consumer_index = 0
+            self.tenant_index += 1  
+
+        return None 
+
+    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
+        """Returns the request parameters for the API call."""
+        # First API call do not call next_page_token but we need params
+        if next_page_token is None:
+            next_page_token = self.get_next_params() 
+        return next_page_token or {}
+
+    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
+        """Determines the next page token for pagination."""
+        return self.get_next_params()
+
 
 
 class MgramsevaWaterConnections(MgramsevaStream):
@@ -436,6 +437,7 @@ class SourceMgramseva(AbstractSource):
             tmp_demand_stream = MgramsevaDemands(self.headers, self.request_info, self.user_request, [tenantid])
             for demand in tmp_demand_stream.read_records(SyncMode.full_refresh):
                 tenantid_to_consumer_codes[tenantid].add(demand["data"]["consumerCode"])
+            tenantid_to_consumer_codes[tenantid] = list(tenantid_to_consumer_codes[tenantid])
 
         streams.append(
             MgramsevaBills(self.headers, self.request_info, self.user_request, self.config["tenantids"], tenantid_to_consumer_codes)
@@ -445,3 +447,4 @@ class SourceMgramseva(AbstractSource):
         )
 
         return streams
+    
