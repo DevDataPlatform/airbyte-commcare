@@ -37,14 +37,13 @@ class MgramsevaStream(HttpStream, ABC):
 
     primary_key = "id"
 
-    def __init__(self, endpoint: str, headers: dict, request_info: dict, user_request: dict, params: dict, response_key: str, **kwargs):
+    def __init__(self, endpoint: str, headers: dict, request_info: dict, user_request: dict, response_key: str, **kwargs):
         """set base url, headers, request info and user request"""
         super().__init__(**kwargs)
         self.endpoint = endpoint
         self.headers = headers
         self.request_info = request_info
         self.user_request = user_request
-        self.params = params
         self.response_key = response_key
 
     def path(
@@ -76,18 +75,20 @@ class MgramsevaStream(HttpStream, ABC):
         """
         return {"RequestInfo": self.request_info, "userInfo": self.user_request}
 
+    def get_next_params(self) -> Optional[Mapping[str, Any]]:
+        """Returns the next available parameters (for pagination)"""
+        raise NotImplementedError
+
+    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
+        """Returns the request parameters for the API call."""
+        # We need params in first api call also and next_page_token will not be called for first call
+        if next_page_token is None:
+            next_page_token = self.get_next_params() 
+        return next_page_token or {}
+
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-
-        return None
-
-    def request_params(
-        self,
-        stream_state: Mapping[str, Any],  # pylint: disable=unused-argument
-        stream_slice: Mapping[str, any] = None,  # pylint: disable=unused-argument
-        next_page_token: Mapping[str, Any] = None,  # pylint: disable=unused-argument
-    ) -> MutableMapping[str, Any]:
-        """request parameters"""
-        return self.params
+        """Determines the next page token for pagination."""
+        return self.get_next_params()
 
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
         """
@@ -104,12 +105,10 @@ class MgramsevaDemands(MgramsevaStream):
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, **kwargs
     ):  # pylint: disable=super-init-not-called
         endpoint = "billing-service/demand/_search"
-        params = {}
         response_key = "Demands"
-        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        super().__init__(endpoint, headers, request_info, user_request, response_key, **kwargs)
         self.tenant_index = 0  
         self.tenantid_list = tenantid_list
-        self.first_call = True
 
     def get_next_params(self) -> Optional[Mapping[str, Any]]:
         """Returns the next available parameters (used for both first and subsequent requests)."""
@@ -120,17 +119,6 @@ class MgramsevaDemands(MgramsevaStream):
             self.tenant_index += 1
             return next_params
         return None
-
-    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
-        """Returns the request parameters for the API call."""
-        if next_page_token is None:
-            next_page_token = self.get_next_params()
-        return next_page_token
-
-    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        """Determines the next page token for pagination."""
-        
-        return self.get_next_params()
     
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
         """include the bill date"""
@@ -148,9 +136,8 @@ class MgramsevaBills(MgramsevaStream):
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, consumer_codes: dict, **kwargs
     ):  # pylint: disable=super-init-not-called
         endpoint = "billing-service/bill/v2/_fetchbill"  
-        params = {}  
         response_key = "Bill"  
-        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        super().__init__(endpoint, headers, request_info, user_request, response_key, **kwargs)
         self.tenant_index = 0  
         self.consumer_index = 0  
         self.tenantid_list = tenantid_list
@@ -170,17 +157,6 @@ class MgramsevaBills(MgramsevaStream):
             self.tenant_index += 1  
         return None 
 
-    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
-        """Returns the request parameters for the API call."""
-        # First API call do not call next_page_token but we need params
-        if next_page_token is None:
-            next_page_token = self.get_next_params() 
-        return next_page_token or {}
-
-    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        """Determines the next page token for pagination."""
-        return self.get_next_params()
-
 
 class MgramsevaTenantExpenses(MgramsevaStream):
     """Object for tenant expenses"""
@@ -190,9 +166,8 @@ class MgramsevaTenantExpenses(MgramsevaStream):
     ):  
         """Initialize the stream with parameters"""
         endpoint = "echallan-services/eChallan/v1/_expenseDashboard"
-        params = {}
         response_key = "ExpenseDashboard"
-        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        super().__init__(endpoint, headers, request_info, user_request, response_key, **kwargs)
         
         # Initialize instance variables
         self.tenantid_list = tenantid_list
@@ -239,16 +214,6 @@ class MgramsevaTenantExpenses(MgramsevaStream):
         
         return None  
 
-    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
-        """Returns the request parameters for the API call."""
-        if next_page_token is None:
-            next_page_token = self.get_next_params()
-        return next_page_token or {}
-
-    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        """Determines the next page token for pagination."""
-        return self.get_next_params()
-
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
         """
         :this response has only one object, so return it
@@ -270,9 +235,8 @@ class MgramsevaPayments(MgramsevaStream):
     ):  # pylint: disable=super-init-not-called
 
         endpoint = "collection-services/payments/WS/_search"  
-        params = {}  
         response_key = "Payments"  
-        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        super().__init__(endpoint, headers, request_info, user_request, response_key, **kwargs)
         self.tenant_index = 0  
         self.consumer_index = 0 
         self.tenantid_list = tenantid_list
@@ -295,17 +259,6 @@ class MgramsevaPayments(MgramsevaStream):
 
         return None 
 
-    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
-        """Returns the request parameters for the API call."""
-        # First API call do not call next_page_token but we need params
-        if next_page_token is None:
-            next_page_token = self.get_next_params() 
-        return next_page_token or {}
-
-    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        """Determines the next page token for pagination."""
-        return self.get_next_params()
-
 
 class MgramsevaWaterConnections(MgramsevaStream):
     """object for water connections"""
@@ -314,9 +267,8 @@ class MgramsevaWaterConnections(MgramsevaStream):
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, **kwargs
     ):  # pylint: disable=super-init-not-called
         endpoint = "ws-services/wc/_search"
-        params = {}
         response_key = "WaterConnection"
-        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        super().__init__(endpoint, headers, request_info, user_request, response_key, **kwargs)
         self.tenant_index = 0  
         self.tenantid_list = tenantid_list
 
@@ -328,16 +280,6 @@ class MgramsevaWaterConnections(MgramsevaStream):
             self.tenant_index += 1
             return next_params
         return None
-
-    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
-        """Returns the request parameters for the API call."""
-        if next_page_token is None:
-            next_page_token = self.get_next_params() 
-        return next_page_token or {}
-
-    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        """Determines the next page token for pagination."""
-        return self.get_next_params()
 
 
 # Source
