@@ -103,31 +103,35 @@ class MgramsevaDemands(MgramsevaStream):
     def __init__(
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, **kwargs
     ):  # pylint: disable=super-init-not-called
-        """ctor"""
+        endpoint = "billing-service/demand/_search"
+        params = {}
+        response_key = "Demands"
+        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        self.tenant_index = 0  
         self.tenantid_list = tenantid_list
-        self.headers = headers
-        self.request_info = request_info
-        self.user_request = user_request
-        self.response_key = "Demands"
+        self.first_call = True
 
-    def read_records(
-        self,
-        sync_mode: SyncMode,
-        cursor_field: Optional[List[str]] = None,
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        stream_state: Optional[Mapping[str, Any]] = None,
-    ) -> Iterable[StreamData]:
-        """override"""
-        for tenantid in self.tenantid_list:
-            params = {
-                "tenantId": tenantid,
-                "businessService": "WS",
-            }
-            demandstream = MgramsevaStream(
-                "billing-service/demand/_search", self.headers, self.request_info, self.user_request, params, self.response_key
-            )
-            yield from demandstream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
+    def get_next_params(self) -> Optional[Mapping[str, Any]]:
+        """Returns the next available parameters (used for both first and subsequent requests)."""
 
+        if self.tenant_index < len(self.tenantid_list):  
+            tenantid = self.tenantid_list[self.tenant_index]
+            next_params = {"tenantId": tenantid, "businessService": "WS"}
+            self.tenant_index += 1
+            return next_params
+        return None
+
+    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
+        """Returns the request parameters for the API call."""
+        if next_page_token is None:
+            next_page_token = self.get_next_params()
+        return next_page_token
+
+    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
+        """Determines the next page token for pagination."""
+        
+        return self.get_next_params()
+    
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
         """include the bill date"""
         demands = response.json()[self.response_key]
@@ -143,28 +147,40 @@ class MgramsevaBills(MgramsevaStream):
     def __init__(
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, consumer_codes: dict, **kwargs
     ):  # pylint: disable=super-init-not-called
-        """specify endpoint for bills and call super"""
-        self.headers = headers
-        self.request_info = request_info
-        self.user_request = user_request
-        self.consumer_codes = consumer_codes
+        endpoint = "billing-service/bill/v2/_fetchbill"  
+        params = {}  
+        response_key = "Bill"  
+        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        self.tenant_index = 0  
+        self.consumer_index = 0  
         self.tenantid_list = tenantid_list
+        self.consumer_codes = consumer_codes
 
-    def read_records(
-        self,
-        sync_mode: SyncMode,
-        cursor_field: Optional[List[str]] = None,
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        stream_state: Optional[Mapping[str, Any]] = None,
-    ) -> Iterable[StreamData]:
-        """override"""
-        for tenantid in self.tenantid_list:
-            for consumer_code in self.consumer_codes[tenantid]:
-                params = {"tenantId": tenantid, "businessService": "WS", "consumerCode": consumer_code}
-                consumer_code_stream = MgramsevaStream(
-                    "billing-service/bill/v2/_fetchbill", self.headers, self.request_info, self.user_request, params, "Bill"
-                )
-                yield from consumer_code_stream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
+    def get_next_params(self) -> Optional[Mapping[str, Any]]:
+        """Returns the next available parameters (used for both first and subsequent requests)."""
+        while self.tenant_index < len(self.tenantid_list):  
+            tenantid = self.tenantid_list[self.tenant_index]
+            consumer_list = self.consumer_codes.get(tenantid, [])
+            if self.consumer_index < len(consumer_list):
+                consumer_code = consumer_list[self.consumer_index]
+                self.consumer_index += 1
+                next_params = {"tenantId": tenantid, "businessService": "WS", "consumerCode": consumer_code}
+                return next_params
+            self.consumer_index = 0
+            self.tenant_index += 1  
+        return None 
+
+    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
+        """Returns the request parameters for the API call."""
+        # First API call do not call next_page_token but we need params
+        if next_page_token is None:
+            next_page_token = self.get_next_params() 
+        return next_page_token or {}
+
+    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
+        """Determines the next page token for pagination."""
+        return self.get_next_params()
+
 
 
 class MgramsevaTenantExpense(MgramsevaStream):
@@ -301,34 +317,37 @@ class MgramsevaPayments(MgramsevaStream):
         return self.get_next_params()
 
 
-
 class MgramsevaWaterConnections(MgramsevaStream):
     """object for water connections"""
 
     def __init__(
         self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, **kwargs
     ):  # pylint: disable=super-init-not-called
-        """specify endpoint for water connections and call super"""
-        self.headers = headers
-        self.request_info = request_info
-        self.user_request = user_request
+        endpoint = "ws-services/wc/_search"
+        params = {}
+        response_key = "WaterConnection"
+        super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        self.tenant_index = 0  
         self.tenantid_list = tenantid_list
 
-    def read_records(
-        self,
-        sync_mode: SyncMode,
-        cursor_field: Optional[List[str]] = None,
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        stream_state: Optional[Mapping[str, Any]] = None,
-    ) -> Iterable[StreamData]:
-        """override"""
+    def get_next_params(self) -> Optional[Mapping[str, Any]]:
+        """Returns the next available parameters (used for both first and subsequent requests)."""
+        if self.tenant_index < len(self.tenantid_list):  
+            tenantid = self.tenantid_list[self.tenant_index]
+            next_params = {"tenantId": tenantid, "businessService": "WS"}
+            self.tenant_index += 1
+            return next_params
+        return None
 
-        for tenantid in self.tenantid_list:
-            params = {"tenantId": tenantid, "businessService": "WS"}
-            wcstream = MgramsevaStream(
-                "ws-services/wc/_search", self.headers, self.request_info, self.user_request, params, "WaterConnection"
-            )
-            yield from wcstream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
+    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
+        """Returns the request parameters for the API call."""
+        if next_page_token is None:
+            next_page_token = self.get_next_params() 
+        return next_page_token or {}
+
+    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
+        """Determines the next page token for pagination."""
+        return self.get_next_params()
 
 
 # Source
@@ -414,9 +433,6 @@ class SourceMgramseva(AbstractSource):
 
         self.setup(config)
         self.get_auth_token()
-
-        # tenant_expenses_from = datetime.strptime(config.get("tenant_expenses_from", "2022-01-01"), "%Y-%m-%d")
-        # tenant_expenses_to = datetime.strptime(config.get("tenant_expenses_to", "2022-01-01"), "%Y-%m-%d")
 
         start_date = datetime.strptime(config.get("start_date", "2022-01-01"), "%Y-%m-%d")
         start_date = pytz.IST.localize(start_date).astimezone(pytz.utc)

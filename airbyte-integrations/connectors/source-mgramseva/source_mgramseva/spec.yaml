@@ -45,17 +45,4 @@ connectionSpecification:
       title: Tenant Ids
       description: Tenant Ids for which data needs to be extracted
       order: 6
-    tenant_expenses_from:
-      type: string
-      title: Tenant Expenses From Date
-      pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
-      default: "2022-01-01"
-      description: Date from which to look for tenant expenses
-      order: 7      
-    tenant_expenses_to:
-      type: string
-      title: Tenant Expenses To Date
-      pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
-      default: "2024-01-01"
-      description: Date till which to look for tenant expenses
-      order: 8
+
