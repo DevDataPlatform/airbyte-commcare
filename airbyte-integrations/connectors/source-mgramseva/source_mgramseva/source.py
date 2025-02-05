@@ -182,94 +182,84 @@ class MgramsevaBills(MgramsevaStream):
         return self.get_next_params()
 
 
-
-class MgramsevaTenantExpense(MgramsevaStream):
-    """object for a single tenant expense"""
+class MgramsevaTenantExpenses(MgramsevaStream):
+    """Object for tenant expenses"""
 
     def __init__(
-        self,
-        endpoint: str,
-        headers: dict,
-        request_info: dict,
-        user_request: dict,
-        tenantid: str,
-        month_start: datetime,
-        month_end: datetime,
-        response_key: str,
-        **kwargs,
-    ):
-        """call super"""
-        self.tenantid = tenantid
-        self.month_start = month_start
-        self.month_end = month_end
-        params = {
-            "tenantId": self.tenantid,
-            "fromDate": int(month_start.timestamp() * 1000),
-            "toDate": int(month_end.timestamp() * 1000),
-        }
+        self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, fromdate: datetime, todate: datetime, **kwargs
+    ):  
+        """Initialize the stream with parameters"""
+        endpoint = "echallan-services/eChallan/v1/_expenseDashboard"
+        params = {}
+        response_key = "ExpenseDashboard"
         super().__init__(endpoint, headers, request_info, user_request, params, response_key, **kwargs)
+        
+        # Initialize instance variables
+        self.tenantid_list = tenantid_list
+        self.fromdate = fromdate.replace(day=1)  # Start from the first day of the month
+        self.todate = todate
+        self.tenant_index = 0
+        self.current_month = self.fromdate
+        
+        # Variables to track tenant and date range
+        self.curr_tenant_id = None
+        self.curr_tenant_start_month = None
+        self.curr_tenant_end_month = None
+
+    def get_next_params(self) -> Optional[Mapping[str, Any]]:
+        """Returns the next available parameters for the request"""
+        while self.tenant_index < len(self.tenantid_list):
+            tenantid = self.tenantid_list[self.tenant_index]
+            
+            if self.current_month < self.todate:
+
+                next_month_start = self.current_month + relativedelta(months=1) - timedelta(milliseconds=1)
+
+                self.curr_tenant_id = tenantid
+                self.curr_tenant_start_month = self.current_month
+                self.curr_tenant_end_month = next_month_start
+
+                params = {
+                    "tenantId": tenantid,
+                    "fromDate": int(self.current_month.timestamp() * 1000),
+                    "toDate": int(next_month_start.timestamp() * 1000),
+                }
+                
+                # Move to the next month
+                self.current_month = next_month_start + timedelta(milliseconds=1)
+
+                # If we've processed all months for a tenant, move to the next tenant
+                if self.current_month >= self.todate:
+                    self.current_month = self.fromdate  # Reset for next tenant
+                    self.tenant_index += 1
+                
+                return params
+            
+            self.tenant_index += 1  # Move to next tenant if months are exhausted
+        
+        return None  
+
+    def request_params(self, stream_state, stream_slice=None, next_page_token=None):
+        """Returns the request parameters for the API call."""
+        if next_page_token is None:
+            next_page_token = self.get_next_params()
+        return next_page_token or {}
+
+    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
+        """Determines the next page token for pagination."""
+        return self.get_next_params()
 
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
         """
         :this response has only one object, so return it
         """
         expenses = response.json()[self.response_key]
-        expenses["tenantId"] = self.tenantid
-        expenses["fromDate"] = self.month_start.strftime("%Y-%m-%d")
-        expenses["toDate"] = self.month_end.strftime("%Y-%m-%d")
-        combined_string = f"{self.tenantid}{expenses['fromDate']}{expenses['toDate']}"
+        expenses["tenantId"] = self.curr_tenant_id
+        expenses["fromDate"] = self.curr_tenant_start_month.strftime("%Y-%m-%d")
+        expenses["toDate"] = self.curr_tenant_end_month.strftime("%Y-%m-%d")
+        combined_string = f"{self.curr_tenant_id}{expenses['fromDate']}{expenses['toDate']}"
         id_hash = hashlib.sha256(combined_string.encode())
         return [{"data": expenses, "id": id_hash.hexdigest()}]
-
-
-class MgramsevaTenantExpenses(MgramsevaStream):
-    """object for tenant payments"""
-
-    def __init__(
-        self, headers: dict, request_info: dict, user_request: dict, tenantid_list: list, fromdate: datetime, todate: datetime, **kwargs
-    ):  # pylint: disable=super-init-not-called
-        """
-        specify endpoint for demands and call super
-        1672531200000 = 2023-01-01 00:00
-        1830297600000 = 2028-01-01 00:00
-        """
-        self.headers = headers
-        self.request_info = request_info
-        self.user_request = user_request
-        self.tenantid_list = tenantid_list
-        self.fromdate = fromdate
-        self.todate = todate
-
-    def read_records(
-        self,
-        sync_mode: SyncMode,
-        cursor_field: Optional[List[str]] = None,
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        stream_state: Optional[Mapping[str, Any]] = None,
-    ) -> Iterable[StreamData]:
-        """override"""
-
-        for tenantid in self.tenantid_list:
-
-            month_start = self.fromdate.replace(day=1)
-
-            while month_start < self.todate:
-
-                next_month_start = month_start + relativedelta(months=1) - timedelta(milliseconds=1)
-
-                stream = MgramsevaTenantExpense(
-                    "echallan-services/eChallan/v1/_expenseDashboard",
-                    self.headers,
-                    self.request_info,
-                    self.user_request,
-                    tenantid,
-                    month_start,
-                    next_month_start,
-                    "ExpenseDashboard",
-                )
-                yield from stream.read_records(sync_mode, cursor_field, stream_slice, stream_state)
-
-                month_start = next_month_start
 
 
 class MgramsevaPayments(MgramsevaStream):
