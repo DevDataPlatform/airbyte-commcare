@@ -279,6 +279,7 @@ class Form(IncrementalStream):
             "indexed_on_start": ix.strftime(self.dateformat_for_query),
             "order_by": "indexed_on",
             "limit": "1000",
+            "include_archived": True,
             "xmlns": self.xmlns,
         }
         if next_page_token:
