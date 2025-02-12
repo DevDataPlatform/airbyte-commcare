@@ -2,18 +2,21 @@
 # Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
+import os
 import uuid
 from typing import Optional
 
 import urllib3
+from pinecone import PineconeException
+from pinecone.grpc import PineconeGRPC
+
 from airbyte_cdk.destinations.vector_db_based.document_processor import METADATA_RECORD_ID_FIELD, METADATA_STREAM_FIELD
 from airbyte_cdk.destinations.vector_db_based.indexer import Indexer
 from airbyte_cdk.destinations.vector_db_based.utils import create_chunks, create_stream_identifier, format_exception
 from airbyte_cdk.models import AirbyteConnectionStatus, Status
 from airbyte_cdk.models.airbyte_protocol import ConfiguredAirbyteCatalog, DestinationSyncMode
 from destination_pinecone.config import PineconeIndexingModel
-from pinecone import PineconeException
-from pinecone.grpc import PineconeGRPC
+
 
 # large enough to speed up processing, small enough to not hit pinecone request limits
 PINECONE_BATCH_SIZE = 40
@@ -25,6 +28,9 @@ MAX_METADATA_SIZE = 40_960 - 10_000
 
 MAX_IDS_PER_DELETE = 1000
 
+AIRBYTE_TAG = "airbyte"
+AIRBYTE_TEST_TAG = "airbyte_test"
+
 
 class PineconeIndexer(Indexer):
     config: PineconeIndexingModel
@@ -32,7 +38,7 @@ class PineconeIndexer(Indexer):
     def __init__(self, config: PineconeIndexingModel, embedding_dimensions: int):
         super().__init__(config)
         try:
-            self.pc = PineconeGRPC(api_key=config.pinecone_key, threaded=True)
+            self.pc = PineconeGRPC(api_key=config.pinecone_key, source_tag=self.get_source_tag, threaded=True)
         except PineconeException as e:
             return AirbyteConnectionStatus(status=Status.FAILED, message=str(e))
 
@@ -61,6 +67,10 @@ class PineconeIndexer(Indexer):
 
     def post_sync(self):
         return []
+
+    def get_source_tag(self):
+        is_test = "PYTEST_CURRENT_TEST" in os.environ or "RUN_IN_AIRBYTE_CI" in os.environ
+        return AIRBYTE_TEST_TAG if is_test else AIRBYTE_TAG
 
     def delete_vectors(self, filter, namespace=None, prefix=None):
         if self._pod_type == "starter":
@@ -129,7 +139,9 @@ class PineconeIndexer(Indexer):
         for batch in serial_batches:
             async_results = []
             for ids_vectors_chunk in create_chunks(batch, batch_size=PINECONE_BATCH_SIZE):
-                async_result = self.pinecone_index.upsert(vectors=ids_vectors_chunk, async_req=True, show_progress=False)
+                async_result = self.pinecone_index.upsert(
+                    vectors=ids_vectors_chunk, async_req=True, show_progress=False, namespace=namespace
+                )
                 async_results.append(async_result)
             # Wait for and retrieve responses (this raises in case of error)
             [async_result.result() for async_result in async_results]

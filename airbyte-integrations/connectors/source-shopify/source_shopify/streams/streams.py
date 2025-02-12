@@ -3,15 +3,12 @@
 #
 
 
-from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Mapping, MutableMapping
 
-import requests
-from airbyte_cdk.sources.streams.core import package_name_from_class
-from airbyte_cdk.sources.utils.schema_helpers import ResourceSchemaLoader
-from requests.exceptions import RequestException
 from source_shopify.shopify_graphql.bulk.query import (
     Collection,
     CustomerAddresses,
+    CustomerJourney,
     DiscountCode,
     FulfillmentOrder,
     InventoryItem,
@@ -24,11 +21,16 @@ from source_shopify.shopify_graphql.bulk.query import (
     MetafieldProduct,
     MetafieldProductImage,
     MetafieldProductVariant,
+    OrderAgreement,
+    OrderRisk,
+    Product,
+    ProductImage,
+    ProductVariant,
     Transaction,
 )
-from source_shopify.shopify_graphql.graphql import get_query_products
-from source_shopify.utils import ApiTypeEnum
-from source_shopify.utils import ShopifyRateLimiter as limiter
+
+from airbyte_cdk.sources.streams.core import package_name_from_class
+from airbyte_cdk.sources.utils.schema_helpers import ResourceSchemaLoader
 
 from .base_streams import (
     IncrementalShopifyGraphQlBulkStream,
@@ -70,6 +72,7 @@ class Customers(IncrementalShopifyStream):
 
 
 class MetafieldCustomers(IncrementalShopifyGraphQlBulkStream):
+    parent_stream_class = Customers
     bulk_query: MetafieldCustomer = MetafieldCustomer
 
 
@@ -108,81 +111,27 @@ class MetafieldDraftOrders(IncrementalShopifyGraphQlBulkStream):
     bulk_query: MetafieldDraftOrder = MetafieldDraftOrder
 
 
-class Products(IncrementalShopifyStreamWithDeletedEvents):
-    use_cache = True
-    data_field = "products"
-    deleted_events_api_name = "Product"
-
-
-class ProductsGraphQl(IncrementalShopifyStream):
-    filter_field = "updatedAt"
-    cursor_field = "updatedAt"
-    data_field = "graphql"
-    http_method = "POST"
-
-    def request_params(
-        self,
-        stream_state: Optional[Mapping[str, Any]] = None,
-        next_page_token: Optional[Mapping[str, Any]] = None,
-        **kwargs,
-    ) -> MutableMapping[str, Any]:
-        return {}
-
-    def request_body_json(
-        self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        next_page_token: Optional[Mapping[str, Any]] = None,
-    ) -> Optional[Mapping]:
-        state_value = stream_state.get(self.filter_field)
-        if state_value:
-            filter_value = state_value
-        else:
-            filter_value = self.default_filter_field_value
-        query = get_query_products(
-            first=self.limit, filter_field=self.filter_field, filter_value=filter_value, next_page_token=next_page_token
-        )
-        return {"query": query}
-
-    @staticmethod
-    def next_page_token(response: requests.Response) -> Optional[Mapping[str, Any]]:
-        page_info = response.json()["data"]["products"]["pageInfo"]
-        has_next_page = page_info["hasNextPage"]
-        if has_next_page:
-            return page_info["endCursor"]
-        else:
-            return None
-
-    @limiter.balance_rate_limit(api_type=ApiTypeEnum.graphql.value)
-    def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
-        if response.status_code is requests.codes.OK:
-            try:
-                json_response = response.json()["data"]["products"]["nodes"]
-                yield from self.produce_records(json_response)
-            except RequestException as e:
-                self.logger.warning(f"Unexpected error in `parse_ersponse`: {e}, the actual response data: {response.text}")
+class Products(IncrementalShopifyGraphQlBulkStream):
+    bulk_query: Product = Product
 
 
 class MetafieldProducts(IncrementalShopifyGraphQlBulkStream):
+    parent_stream_class = Products
     bulk_query: MetafieldProduct = MetafieldProduct
 
 
-class ProductImages(IncrementalShopifyNestedStream):
+class ProductImages(IncrementalShopifyGraphQlBulkStream):
     parent_stream_class = Products
-    nested_entity = "images"
-    # add `product_id` to each nested subrecord
-    mutation_map = {"product_id": "id"}
+    bulk_query: ProductImage = ProductImage
 
 
 class MetafieldProductImages(IncrementalShopifyGraphQlBulkStream):
+    parent_stream_class = Products
     bulk_query: MetafieldProductImage = MetafieldProductImage
 
 
-class ProductVariants(IncrementalShopifyNestedStream):
-    parent_stream_class = Products
-    nested_entity = "variants"
-    # add `product_id` to each nested subrecord
-    mutation_map = {"product_id": "id"}
+class ProductVariants(IncrementalShopifyGraphQlBulkStream):
+    bulk_query: ProductVariant = ProductVariant
 
 
 class MetafieldProductVariants(IncrementalShopifyGraphQlBulkStream):
@@ -205,6 +154,11 @@ class AbandonedCheckouts(IncrementalShopifyStream):
 class CustomCollections(IncrementalShopifyStreamWithDeletedEvents):
     data_field = "custom_collections"
     deleted_events_api_name = "Collection"
+
+
+class CustomerJourneySummary(IncrementalShopifyGraphQlBulkStream):
+    bulk_query: CustomerJourney = CustomerJourney
+    primary_key = "order_id"
 
 
 class SmartCollections(IncrementalShopifyStream):
@@ -240,7 +194,6 @@ class MetafieldCollections(IncrementalShopifyGraphQlBulkStream):
 
 
 class BalanceTransactions(IncrementalShopifyStream):
-
     """
     PaymentsTransactions stream does not support Incremental Refresh based on datetime fields, only `since_id` is supported:
     https://shopify.dev/api/admin-rest/2021-07/resources/transactions
@@ -255,6 +208,10 @@ class BalanceTransactions(IncrementalShopifyStream):
         return f"shopify_payments/balance/{self.data_field}.json"
 
 
+class OrderAgreements(IncrementalShopifyGraphQlBulkStream):
+    bulk_query: OrderAgreement = OrderAgreement
+
+
 class OrderRefunds(IncrementalShopifyNestedStream):
     parent_stream_class = Orders
     # override default cursor field
@@ -262,15 +219,8 @@ class OrderRefunds(IncrementalShopifyNestedStream):
     nested_entity = "refunds"
 
 
-class OrderRisks(IncrementalShopifySubstream):
-    parent_stream_class = Orders
-    slice_key = "order_id"
-    data_field = "risks"
-    cursor_field = "id"
-
-    def path(self, stream_slice: Mapping[str, Any] = None, **kwargs) -> str:
-        order_id = stream_slice["order_id"]
-        return f"orders/{order_id}/{self.data_field}.json"
+class OrderRisks(IncrementalShopifyGraphQlBulkStream):
+    bulk_query: OrderRisk = OrderRisk
 
 
 class Transactions(IncrementalShopifySubstream):
@@ -369,14 +319,6 @@ class Shop(ShopifyStream):
 
 class MetafieldShops(IncrementalShopifyStream):
     data_field = "metafields"
-
-
-class CustomerSavedSearch(IncrementalShopifyStream):
-    api_version = "2022-01"
-    cursor_field = "id"
-    order_field = "id"
-    data_field = "customer_saved_searches"
-    filter_field = "since_id"
 
 
 class CustomerAddress(IncrementalShopifyGraphQlBulkStream):

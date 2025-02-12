@@ -43,11 +43,27 @@ the MeiliSearch docs.
 
 ## Changelog
 
+<details>
+  <summary>Expand to review</summary>
+
 | Version | Date       | Pull Request                                              | Subject                                                |
 | :------ | :--------- | :-------------------------------------------------------- | :----------------------------------------------------- |
+| 1.0.13 | 2025-01-25 | [52206](https://github.com/airbytehq/airbyte/pull/52206) | Update dependencies |
+| 1.0.12 | 2025-01-11 | [51270](https://github.com/airbytehq/airbyte/pull/51270) | Update dependencies |
+| 1.0.11 | 2025-01-04 | [50909](https://github.com/airbytehq/airbyte/pull/50909) | Update dependencies |
+| 1.0.10 | 2024-12-28 | [50460](https://github.com/airbytehq/airbyte/pull/50460) | Update dependencies |
+| 1.0.9 | 2024-12-21 | [50196](https://github.com/airbytehq/airbyte/pull/50196) | Update dependencies |
+| 1.0.8 | 2024-12-14 | [49550](https://github.com/airbytehq/airbyte/pull/49550) | Update dependencies |
+| 1.0.7 | 2024-12-11 | [49021](https://github.com/airbytehq/airbyte/pull/49021) | Starting with this version, the Docker image is now rootless. Please note that this and future versions will not be compatible with Airbyte versions earlier than 0.64 |
+| 1.0.6 | 2024-11-04 | [48207](https://github.com/airbytehq/airbyte/pull/48207) | Update dependencies |
+| 1.0.5 | 2024-10-29 | [47889](https://github.com/airbytehq/airbyte/pull/47889) | Update dependencies |
+| 1.0.4 | 2024-10-28 | [47646](https://github.com/airbytehq/airbyte/pull/47646) | Update dependencies |
+| 1.0.3   | 2024-07-08 | [#TODO](https://github.com/airbytehq/airbyte/pull/TODO) | Switching to Poetry and base image                                   |
 | 1.0.2   | 2024-03-05 | [#35838](https://github.com/airbytehq/airbyte/pull/35838) | Un-archive connector                                   |
 | 1.0.1   | 2023-12-19 | [27692](https://github.com/airbytehq/airbyte/pull/27692)  | Fix incomplete data indexing                           |
 | 1.0.0   | 2022-10-26 | [18036](https://github.com/airbytehq/airbyte/pull/18036)  | Migrate MeiliSearch to Python CDK                      |
 | 0.2.13  | 2022-06-17 | [13864](https://github.com/airbytehq/airbyte/pull/13864)  | Updated stacktrace format for any trace message errors |
 | 0.2.12  | 2022-02-14 | [10256](https://github.com/airbytehq/airbyte/pull/10256)  | Add `-XX:+ExitOnOutOfMemoryError` JVM option           |
 | 0.2.11  | 2021-12-28 | [9156](https://github.com/airbytehq/airbyte/pull/9156)    | Update connector fields title/description              |
+
+</details>

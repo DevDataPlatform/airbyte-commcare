@@ -1,6 +1,9 @@
 # Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+
 from __future__ import annotations
 
+import _collections_abc
+import hashlib
 import json
 import logging
 import tempfile
@@ -8,17 +11,25 @@ from collections import defaultdict
 from collections.abc import Iterable, Iterator, MutableMapping
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import cache
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
-import _collections_abc
 import dagger
 import requests
-from airbyte_protocol.models import AirbyteCatalog  # type: ignore
-from airbyte_protocol.models import AirbyteMessage  # type: ignore
-from airbyte_protocol.models import ConfiguredAirbyteCatalog  # type: ignore
+from airbyte_protocol.models import (
+    AirbyteCatalog,  # type: ignore
+    AirbyteMessage,  # type: ignore
+    AirbyteStateMessage,  # type: ignore
+    AirbyteStreamStatusTraceMessage,  # type: ignore
+    ConfiguredAirbyteCatalog,  # type: ignore
+    TraceType,  # type: ignore
+)
 from airbyte_protocol.models import Type as AirbyteMessageType
 from genson import SchemaBuilder  # type: ignore
+from mitmproxy import http
+from pydantic import ValidationError
+
 from live_tests.commons.backends import DuckDbBackend, FileBackend
 from live_tests.commons.secret_access import get_airbyte_api_key
 from live_tests.commons.utils import (
@@ -28,8 +39,6 @@ from live_tests.commons.utils import (
     sanitize_stream_name,
     sort_dict_keys,
 )
-from mitmproxy import http
-from pydantic import ValidationError
 
 
 class UserDict(_collections_abc.MutableMapping):  # type: ignore
@@ -133,6 +142,15 @@ class Command(Enum):
     READ_WITH_STATE = "read-with-state"
     SPEC = "spec"
 
+    def needs_config(self) -> bool:
+        return self in {Command.CHECK, Command.DISCOVER, Command.READ, Command.READ_WITH_STATE}
+
+    def needs_catalog(self) -> bool:
+        return self in {Command.READ, Command.READ_WITH_STATE}
+
+    def needs_state(self) -> bool:
+        return self in {Command.READ_WITH_STATE}
+
 
 class TargetOrControl(Enum):
     TARGET = "target"
@@ -144,8 +162,21 @@ class ActorType(Enum):
     DESTINATION = "destination"
 
 
+class ConnectionSubset(Enum):
+    """Signals which connection pool to consider for this live test — just the Airbyte sandboxes, or all possible connctions on Cloud."""
+
+    SANDBOXES = "sandboxes"
+    ALL = "all"
+
+
 @dataclass
 class ConnectorUnderTest:
+    """Represents a connector being tested.
+    In validation tests, there would be one connector under test.
+    When running regression tests, there would be two connectors under test: the target and the control versions of the same connector.
+    """
+
+    # connector image, assuming it's in the format "airbyte/{actor_type}-{connector_name}:{version}"
     image_name: str
     container: dagger.Container
     target_or_control: TargetOrControl
@@ -186,6 +217,7 @@ class ConnectorUnderTest:
 
 @dataclass
 class ExecutionInputs:
+    hashed_connection_id: str
     connector_under_test: ConnectorUnderTest
     actor_id: str
     global_output_dir: Path
@@ -217,7 +249,7 @@ class ExecutionInputs:
     def output_dir(self) -> Path:
         output_dir = (
             self.global_output_dir
-            / f"command_execution_artifacts/{self.connector_under_test.name}/{self.command.value}/{self.connector_under_test.version}/"
+            / f"command_execution_artifacts/{self.connector_under_test.name}/{self.command.value}/{self.connector_under_test.version}/{self.hashed_connection_id}"
         )
         output_dir.mkdir(parents=True, exist_ok=True)
         return output_dir
@@ -225,13 +257,16 @@ class ExecutionInputs:
 
 @dataclass
 class ExecutionResult:
+    hashed_connection_id: str
     actor_id: str
+    configured_catalog: ConfiguredAirbyteCatalog
     connector_under_test: ConnectorUnderTest
     command: Command
     stdout_file_path: Path
     stderr_file_path: Path
     success: bool
     executed_container: Optional[dagger.Container]
+    config: Optional[SecretDict]
     http_dump: Optional[dagger.File] = None
     http_flows: list[http.HTTPFlow] = field(default_factory=list)
     stream_schemas: Optional[dict[str, Any]] = None
@@ -250,28 +285,42 @@ class ExecutionResult:
 
     @property
     def duckdb_schema(self) -> Iterable[str]:
-        return (self.connector_under_test.target_or_control.value, self.command.value)
+        return (self.connector_under_test.target_or_control.value, self.command.value, self.hashed_connection_id)
+
+    @property
+    def configured_streams(self) -> List[str]:
+        return [stream.stream.name for stream in self.configured_catalog.streams]
+
+    @property
+    def primary_keys_per_stream(self) -> Dict[str, List[str]]:
+        return {stream.stream.name: stream.primary_key[0] if stream.primary_key else None for stream in self.configured_catalog.streams}
 
     @classmethod
     async def load(
         cls: type[ExecutionResult],
         connector_under_test: ConnectorUnderTest,
+        hashed_connection_id: str,
         actor_id: str,
+        configured_catalog: ConfiguredAirbyteCatalog,
         command: Command,
         stdout_file_path: Path,
         stderr_file_path: Path,
         success: bool,
         executed_container: Optional[dagger.Container],
+        config: Optional[SecretDict] = None,
         http_dump: Optional[dagger.File] = None,
     ) -> ExecutionResult:
         execution_result = cls(
+            hashed_connection_id,
             actor_id,
+            configured_catalog,
             connector_under_test,
             command,
             stdout_file_path,
             stderr_file_path,
             success,
             executed_container,
+            config,
             http_dump,
         )
         await execution_result.load_http_flows()
@@ -312,9 +361,35 @@ class ExecutionResult:
                 stream_schema_builder = SchemaBuilder()
                 stream_schema_builder.add_schema({"type": "object", "properties": {}})
                 stream_builders[stream] = stream_schema_builder
-            stream_builders[stream].add_object(record.record.data)
+            stream_builders[stream].add_object(self.get_obfuscated_types(record.record.data))
         self.logger.info("Stream schemas generated")
         return {stream: sort_dict_keys(stream_builders[stream].to_schema()) for stream in stream_builders}
+
+    @staticmethod
+    def get_obfuscated_types(data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Convert obfuscated records into a record whose values have the same type as the original values.
+        """
+        types = {}
+        for k, v in data.items():
+            if v.startswith("string_"):
+                types[k] = "a"
+            elif v.startswith("integer_"):
+                types[k] = 0
+            elif v.startswith("number_"):
+                types[k] = 0.1
+            elif v.startswith("boolean_"):
+                types[k] = True
+            elif v.startswith("null_"):
+                types[k] = None
+            elif v.startswith("array_"):
+                types[k] = []
+            elif v.startswith("object_"):
+                types[k] = {}
+            else:
+                types[k] = v
+
+        return types
 
     def get_records_per_stream(self, stream: str) -> Iterator[AirbyteMessage]:
         assert self.backend is not None, "Backend must be set to get records per stream"
@@ -329,6 +404,23 @@ class ExecutionResult:
                 if message.type is AirbyteMessageType.RECORD:
                     yield message
 
+    def get_states_per_stream(self, stream: str) -> Dict[str, List[AirbyteStateMessage]]:
+        self.logger.info(f"Reading state messages for stream {stream}")
+        states = defaultdict(list)
+        for message in self.airbyte_messages:
+            if message.type is AirbyteMessageType.STATE:
+                states[message.state.stream.stream_descriptor.name].append(message.state)
+        return states
+
+    def get_status_messages_per_stream(self, stream: str) -> Dict[str, List[AirbyteStreamStatusTraceMessage]]:
+        self.logger.info(f"Reading state messages for stream {stream}")
+        statuses = defaultdict(list)
+        for message in self.airbyte_messages:
+            if message.type is AirbyteMessageType.TRACE and message.trace.type == TraceType.STREAM_STATUS:
+                statuses[message.trace.stream_status.stream_descriptor.name].append(message.trace.stream_status)
+        return statuses
+
+    @cache
     def get_message_count_per_type(self) -> dict[AirbyteMessageType, int]:
         message_count: dict[AirbyteMessageType, int] = defaultdict(int)
         for message in self.airbyte_messages:
@@ -421,6 +513,9 @@ class ExecutionResult:
             self.logger.error(f"Response: {response.text}")
         self.logger.info(f"Updated configuration for {self.connector_under_test.name}, actor {self.actor_id}")
 
+    def __hash__(self):
+        return hash(self.connector_under_test.version)
+
 
 @dataclass(kw_only=True)
 class ConnectionObjects:
@@ -434,3 +529,15 @@ class ConnectionObjects:
     destination_id: Optional[str]
     source_docker_image: Optional[str]
     connection_id: Optional[str]
+
+    @property
+    def url(self) -> Optional[str]:
+        if not self.workspace_id or not self.connection_id:
+            return None
+        return f"https://cloud.airbyte.com/workspaces/{self.workspace_id}/connections/{self.connection_id}"
+
+    @property
+    def hashed_connection_id(self) -> Optional[str]:
+        if not self.connection_id:
+            return None
+        return hashlib.sha256(self.connection_id.encode("utf-8")).hexdigest()[:7]

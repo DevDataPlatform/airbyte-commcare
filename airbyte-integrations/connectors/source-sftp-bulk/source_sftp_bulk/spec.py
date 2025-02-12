@@ -1,10 +1,12 @@
 # Copyright (c) 2024 Airbyte, Inc., all rights reserved.
 
+
 from typing import Literal, Optional, Union
 
-from airbyte_cdk.sources.file_based.config.abstract_file_based_spec import AbstractFileBasedSpec
-from airbyte_cdk.utils.oneof_option_config import OneOfOptionConfig
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
+
+from airbyte_cdk import OneOfOptionConfig
+from airbyte_cdk.sources.file_based.config.abstract_file_based_spec import AbstractFileBasedSpec, DeliverRawFiles, DeliverRecords
 
 
 class PasswordCredentials(BaseModel):
@@ -22,7 +24,7 @@ class PrivateKeyCredentials(BaseModel):
         discriminator = "auth_type"
 
     auth_type: Literal["private_key"] = Field("private_key", const=True)
-    private_key: str = Field(title="Private key", description="The Private key", multiline=True, order=4)
+    private_key: str = Field(title="Private key", description="The Private key", multiline=True, order=4, airbyte_secret=True)
 
 
 class SourceSFTPBulkSpec(AbstractFileBasedSpec):
@@ -46,6 +48,16 @@ class SourceSFTPBulkSpec(AbstractFileBasedSpec):
         order=6,
         default="/",
         pattern_descriptor="/folder_to_sync",
+    )
+
+    delivery_method: Union[DeliverRecords, DeliverRawFiles] = Field(
+        title="Delivery Method",
+        discriminator="delivery_type",
+        type="object",
+        order=7,
+        display_type="radio",
+        group="advanced",
+        default="use_records_transfer",
     )
 
     @classmethod

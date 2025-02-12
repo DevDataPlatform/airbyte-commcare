@@ -249,17 +249,52 @@ Before parsing each document, the connector exports Google Document files to Doc
 
 This connector utilizes the open source [Unstructured](https://unstructured-io.github.io/unstructured/introduction.html#product-offerings) library to perform OCR and text extraction from PDFs and MS Word files, as well as from embedded tables and images. You can read more about the parsing logic in the [Unstructured docs](https://unstructured-io.github.io/unstructured/core/partition.html) and you can learn about other Unstructured tools and services at [www.unstructured.io](https://www.unstructured.io).
 
+#### Copy Raw Files Configuration
+
+<FieldAnchor field="delivery_method.delivery_type">
+
+:::info
+
+The raw file replication feature has the following requirements and limitations:
+- **Supported Airbyte Versions:**
+  - Cloud: All Workspaces
+  - OSS / Enterprise: `v1.2.0` or later
+- **Max File Size:** `1GB` per file
+- **Supported Destinations:**
+  - S3: `v1.4.0` or later
+
+:::
+
+Copy raw files without parsing their contents. Bits are copied into the destination exactly as they appeared in the source. Recommended for use with unstructured text data, non-text and compressed files.
+
+Format options will not be taken into account. Instead, files will be transferred to the file-based destination without parsing underlying data.
+
+</FieldAnchor>
+
+##### Preserve Sub-Directories in File Paths
+
+If enabled, sends subdirectory folder structure along with source file names to the destination. Otherwise, files will be synced by their names only. This option is ignored when file-based replication is not enabled.
+
 ## Changelog
 
+<details>
+  <summary>Expand to review</summary>
+
 | Version | Date       | Pull Request                                             | Subject                                                                                      |
-| ------- | ---------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 0.0.10  | 2024-03-28 | [36581](https://github.com/airbytehq/airbyte/pull/36581) | Manage dependencies with Poetry                                                              |
-| 0.0.9   | 2024-02-06 | [34936](https://github.com/airbytehq/airbyte/pull/34936) | Bump CDK version to avoid missing SyncMode errors                                            |
-| 0.0.8   | 2024-01-30 | [34681](https://github.com/airbytehq/airbyte/pull/34681) | Unpin CDK version to make compatible with the Concurrent CDK                                 |
-| 0.0.7   | 2024-01-30 | [34661](https://github.com/airbytehq/airbyte/pull/34661) | Pin CDK version until upgrade for compatibility with the Concurrent CDK                      |
-| 0.0.6   | 2023-12-16 | [33414](https://github.com/airbytehq/airbyte/pull/33414) | Prepare for airbyte-lib                                                                      |
-| 0.0.5   | 2023-12-14 | [33411](https://github.com/airbytehq/airbyte/pull/33411) | Bump CDK version to auto-set primary key for document file streams and support raw txt files |
-| 0.0.4   | 2023-12-06 | [33187](https://github.com/airbytehq/airbyte/pull/33187) | Bump CDK version to hide source-defined primary key                                          |
-| 0.0.3   | 2023-11-16 | [31458](https://github.com/airbytehq/airbyte/pull/31458) | Improve folder id input and update document file type parser                                 |
-| 0.0.2   | 2023-11-02 | [31458](https://github.com/airbytehq/airbyte/pull/31458) | Allow syncs on shared drives                                                                 |
-| 0.0.1   | 2023-11-02 | [31458](https://github.com/airbytehq/airbyte/pull/31458) | Initial Google Drive source                                                                  |
+|---------|------------|----------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| 0.1.0 | 2025-01-27 | [52572](https://github.com/airbytehq/airbyte/pull/52572) | Promoting release candidate 0.1.0-rc.1 to a main version. |
+| 0.1.0-rc.1  | 2025-01-20 | [51585](https://github.com/airbytehq/airbyte/pull/51585) | Bump cdk to enable universal file transfer |
+| 0.0.12 | 2024-06-06 | [39291](https://github.com/airbytehq/airbyte/pull/39291) | [autopull] Upgrade base image to v1.2.2 |
+| 0.0.11 | 2024-05-29 | [38698](https://github.com/airbytehq/airbyte/pull/38698) | Avoid error on empty stream when running discover |
+| 0.0.10 | 2024-03-28 | [36581](https://github.com/airbytehq/airbyte/pull/36581) | Manage dependencies with Poetry |
+| 0.0.9 | 2024-02-06 | [34936](https://github.com/airbytehq/airbyte/pull/34936) | Bump CDK version to avoid missing SyncMode errors |
+| 0.0.8 | 2024-01-30 | [34681](https://github.com/airbytehq/airbyte/pull/34681) | Unpin CDK version to make compatible with the Concurrent CDK |
+| 0.0.7 | 2024-01-30 | [34661](https://github.com/airbytehq/airbyte/pull/34661) | Pin CDK version until upgrade for compatibility with the Concurrent CDK |
+| 0.0.6 | 2023-12-16 | [33414](https://github.com/airbytehq/airbyte/pull/33414) | Prepare for airbyte-lib |
+| 0.0.5 | 2023-12-14 | [33411](https://github.com/airbytehq/airbyte/pull/33411) | Bump CDK version to auto-set primary key for document file streams and support raw txt files |
+| 0.0.4 | 2023-12-06 | [33187](https://github.com/airbytehq/airbyte/pull/33187) | Bump CDK version to hide source-defined primary key |
+| 0.0.3 | 2023-11-16 | [31458](https://github.com/airbytehq/airbyte/pull/31458) | Improve folder id input and update document file type parser |
+| 0.0.2 | 2023-11-02 | [31458](https://github.com/airbytehq/airbyte/pull/31458) | Allow syncs on shared drives |
+| 0.0.1 | 2023-11-02 | [31458](https://github.com/airbytehq/airbyte/pull/31458) | Initial Google Drive source |
+
+</details>

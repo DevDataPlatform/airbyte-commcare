@@ -6,8 +6,9 @@
 import json
 
 import requests
-from airbyte_cdk.sources.declarative.decoders import JsonDecoder
 from source_mailchimp.components import MailChimpRecordExtractorEmailActivity
+
+from airbyte_cdk.sources.declarative.decoders import JsonDecoder
 
 
 def test_email_activity_extractor():
@@ -63,4 +64,4 @@ def test_email_activity_extractor():
         },
     ]
 
-    assert extractor.extract_records(response=response) == expected_records
+    assert list(extractor.extract_records(response=response)) == expected_records

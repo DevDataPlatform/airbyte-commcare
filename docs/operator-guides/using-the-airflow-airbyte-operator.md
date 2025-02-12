@@ -13,11 +13,6 @@ For [historic reasons](https://github.com/airbytehq/airbyte/issues/836), the Air
 
 :::
 
-:::caution
-
-Due to some difficulties in setting up Airflow, we recommend first trying out the deployment using the local example [here](https://github.com/airbytehq/airbyte/tree/master/resources/examples/airflow), as it contains accurate configuration required to get the Airbyte operator up and running.
-
-:::
 
 The Airbyte Provider documentation on Airflow project can be found [here](https://airflow.apache.org/docs/apache-airflow-providers-airbyte/stable/index.html).
 
@@ -136,7 +131,7 @@ with DAG(dag_id='airbyte_trigger_job_example_async',
 
 Don't be fooled by our simple example of only one Airflow task. Airbyte is a powerful data integration platform supporting many sources and destinations. The Airbyte Airflow Operator means Airbyte can now be easily used with the Airflow ecosystem - give it a shot!
 
-We love to hear any questions or feedback on our [Slack](https://slack.airbyte.io/). We're still in alpha, so if you see any rough edges or want to request a connector, feel free to create an issue on our [Github](https://github.com/airbytehq/airbyte) or thumbs up an existing issue.
+We love to hear any questions or feedback on our [Slack](https://slack.airbyte.io/). If you see any rough edges or want to request a connector, feel free to create an issue on our [Github](https://github.com/airbytehq/airbyte) or thumbs up an existing issue.
 
 ## Related articles and guides
 
