@@ -1,32 +1,204 @@
+version: 0.57.0
 type: DeclarativeSource
-version: 0.51.1
-spec:
-  type: Spec
-  documentation_url: https://example.org
-  connection_specification:
-    type: object
-    $schema: http://json-schema.org/draft-07/schema#
-    required:
-      - api_key
-    properties:
-      api_key:
-        type: string
-        order: 0
-        title: API Key
-        airbyte_secret: true
-    additionalProperties: true
+check:
+  type: CheckStream
+  stream_names:
+    - surveys
 streams:
-  - name: surveys
-    type: DeclarativeStream
+  - type: DeclarativeStream
+    name: surveys
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        $schema: http://json-schema.org/schema#
+        properties:
+          align_left:
+            type: boolean
+          allow_non_unique:
+            type: boolean
+          allquestions_count:
+            type: number
+          background_color:
+            type: string
+          bold:
+            type: boolean
+          checkmark_size:
+            type: number
+          columns:
+            type: number
+          cover_custom:
+            type: boolean
+          cover_custom_text:
+            type: string
+          cover_with_qr:
+            type: boolean
+          created_at:
+            type: string
+          font:
+            type: string
+          font_size:
+            type: number
+          footer_center:
+            type: string
+          footer_left:
+            type: string
+          footer_right:
+            type: string
+          force_stamping:
+            type: boolean
+          front_page:
+            type: string
+          grading:
+            type: boolean
+          grid_column_margin:
+            type: number
+          grid_left_checkmarks:
+            type: boolean
+          grid_margin:
+            type: number
+          h_margin:
+            type: number
+          heading_bg:
+            type: string
+          heading_fg:
+            type: string
+          heading_font:
+            type: string
+          hyphenate:
+            type: boolean
+          id:
+            type: number
+          label:
+            type: string
+          language:
+            type: string
+          languages:
+            type: array
+          logo:
+            type: string
+          low_quality:
+            type: boolean
+          mode:
+            type: number
+          multicol_margin:
+            type: number
+          multicol_width:
+            type: number
+          pages:
+            type:
+              - 'null'
+              - number
+          pdf_formdata:
+            type: boolean
+          pending_count:
+            type: number
+          prefill_mode:
+            type: string
+          prefilled_submit_multiple:
+            type: boolean
+          prefilled_submit_only:
+            type: boolean
+          prevent_submission:
+            type: boolean
+          processed_count:
+            type: number
+          randomized:
+            type:
+              - array
+              - 'null'
+          remove_header:
+            type: boolean
+          remove_help:
+            type: boolean
+          slug:
+            type: string
+          spacing:
+            type: number
+          status:
+            type: boolean
+          team_id:
+            type: number
+          text_color:
+            type: string
+          text_height:
+            type: number
+          updated_at:
+            type: string
+          upload_pdf_single:
+            type: boolean
+          uploads_count:
+            type: number
+          v_margin:
+            type: number
+          variants:
+            items:
+              properties:
+                code:
+                  type: string
+                created_at:
+                  type: string
+                entries_count:
+                  type: number
+                id:
+                  type: number
+                label:
+                  type:
+                    - 'null'
+                    - string
+                language:
+                  type: string
+                pages:
+                  type: number
+                stamp:
+                  type: boolean
+                survey_id:
+                  type: number
+                uploads_count:
+                  type: number
+              type: object
+            type: array
+          variants_count:
+            type: number
+          versioning:
+            type: boolean
+          web_survey_slug:
+            type: string
+          web_surveys:
+            type: boolean
+          web_surveys_code:
+            type: boolean
+          web_surveys_completion_message:
+            type: string
+          web_surveys_header:
+            type: boolean
+          web_surveys_heading_bg:
+            type: string
+          web_surveys_heading_fg:
+            type: string
+          web_surveys_link:
+            type: boolean
+          web_surveys_link_url:
+            type: boolean
+          web_surveys_primary_color:
+            type: string
+          web_surveys_save:
+            type: boolean
+          web_surveys_valid:
+            type:
+              - 'null'
+              - string
+        type: object
     retriever:
       type: SimpleRetriever
-      paginator:
-        type: NoPagination
       requester:
-        path: https://api.papersurvey.io/surveys
         type: HttpRequester
         url_base: https://api.papersurvey.io
+        path: https://api.papersurvey.io/surveys
         http_method: GET
+        request_parameters: {}
+        request_headers: {}
         authenticator:
           type: ApiKeyAuthenticator
           api_token: '{{ config[''api_key''] }}'
@@ -38,527 +210,110 @@ streams:
           type: CompositeErrorHandler
           error_handlers:
             - type: DefaultErrorHandler
-        request_headers: {}
         request_body_json: {}
-        request_parameters: {}
       record_selector:
         type: RecordSelector
         extractor:
           type: DpathExtractor
           field_path: []
-    primary_key:
-      - id
-    schema_loader:
-      type: InlineSchemaLoader
-      schema:
-        type: object
-        $schema: http://json-schema.org/schema#
-        properties:
-          id:
-            type: number
-          bold:
-            type: boolean
-          font:
-            type: string
-          logo:
-            type: string
-          mode:
-            type: number
-          slug:
-            type: string
-          label:
-            type: string
-          pages:
-            type: number
-          status:
-            type: boolean
-          columns:
-            type: number
-          grading:
-            type: boolean
-          spacing:
-            type: number
-          team_id:
-            type: number
-          h_margin:
-            type: number
-          language:
-            type: string
-          v_margin:
-            type: number
-          variants:
-            type: array
-            items:
-              type: object
-              properties:
-                id:
-                  type: number
-                code:
-                  type: string
-                pages:
-                  type: number
-                stamp:
-                  type: boolean
-                language:
-                  type: string
-                survey_id:
-                  type: number
-                created_at:
-                  type: string
-                entries_count:
-                  type: number
-                uploads_count:
-                  type: number
-          font_size:
-            type: number
-          hyphenate:
-            type: boolean
-          languages:
-            type: array
-          align_left:
-            type: boolean
-          created_at:
-            type: string
-          front_page:
-            type: string
-          heading_bg:
-            type: string
-          heading_fg:
-            type: string
-          randomized:
-            type:
-              - array
-              - 'null'
-          text_color:
-            type: string
-          updated_at:
-            type: string
-          versioning:
-            type: boolean
-          footer_left:
-            type: string
-          grid_margin:
-            type: number
-          low_quality:
-            type: boolean
-          remove_help:
-            type: boolean
-          text_height:
-            type: number
-          web_surveys:
-            type: boolean
-          cover_custom:
-            type: boolean
-          footer_right:
-            type: string
-          heading_font:
-            type: string
-          pdf_formdata:
-            type: boolean
-          prefill_mode:
-            type: string
-          cover_with_qr:
-            type: boolean
-          footer_center:
-            type: string
-          pending_count:
-            type: number
-          remove_header:
-            type: boolean
-          uploads_count:
-            type: number
-          checkmark_size:
-            type: number
-          force_stamping:
-            type: boolean
-          multicol_width:
-            type: number
-          variants_count:
-            type: number
-          multicol_margin:
-            type: number
-          processed_count:
-            type: number
-          web_survey_slug:
-            type: string
-          allow_non_unique:
-            type: boolean
-          background_color:
-            type: string
-          web_surveys_code:
-            type: boolean
-          web_surveys_link:
-            type: boolean
-          web_surveys_save:
-            type: boolean
-          cover_custom_text:
-            type: string
-          upload_pdf_single:
-            type: boolean
-          web_surveys_valid:
-            type:
-              - 'null'
-              - string
-          allquestions_count:
-            type: number
-          grid_column_margin:
-            type: number
-          prevent_submission:
-            type: boolean
-          grid_left_checkmarks:
-            type: boolean
-          web_surveys_link_url:
-            type: boolean
-          prefilled_submit_only:
-            type: boolean
-  - name: review
-    type: DeclarativeStream
-    retriever:
-      type: SimpleRetriever
       paginator:
-        type: DefaultPaginator
-        page_size_option:
-          type: RequestOption
-          field_name: per_page
-          inject_into: request_parameter
-        page_token_option:
-          type: RequestOption
-          field_name: page
-          inject_into: request_parameter
-        pagination_strategy:
-          type: PageIncrement
-          page_size: 100
-          start_from_page: 1
-      requester:
-        path: https://api.papersurvey.io/surveys/{{stream_partition.survey}}/review
-        type: HttpRequester
-        url_base: https://api.papersurvey.io
-        http_method: POST
-        authenticator:
-          type: ApiKeyAuthenticator
-          api_token: '{{ config[''api_key''] }}'
-          inject_into:
-            type: RequestOption
-            field_name: api_token
-            inject_into: request_parameter
-        request_headers: {}
-        request_body_json: {}
-        request_parameters: {}
-      record_selector:
-        type: RecordSelector
-        extractor:
-          type: DpathExtractor
-          field_path:
-            - data
-      partition_router:
-        - type: SubstreamPartitionRouter
-          parent_stream_configs:
-            - type: ParentStreamConfig
-              stream:
-                name: surveys
-                type: DeclarativeStream
-                retriever:
-                  type: SimpleRetriever
-                  paginator:
-                    type: NoPagination
-                  requester:
-                    path: https://api.papersurvey.io/surveys
-                    type: HttpRequester
-                    url_base: https://api.papersurvey.io
-                    http_method: GET
-                    authenticator:
-                      type: ApiKeyAuthenticator
-                      api_token: '{{ config[''api_key''] }}'
-                      inject_into:
-                        type: RequestOption
-                        field_name: api_token
-                        inject_into: request_parameter
-                    error_handler:
-                      type: CompositeErrorHandler
-                      error_handlers:
-                        - type: DefaultErrorHandler
-                    request_headers: {}
-                    request_body_json: {}
-                    request_parameters: {}
-                  record_selector:
-                    type: RecordSelector
-                    extractor:
-                      type: DpathExtractor
-                      field_path: []
-                primary_key:
-                  - id
-                schema_loader:
-                  type: InlineSchemaLoader
-                  schema:
-                    type: object
-                    $schema: http://json-schema.org/schema#
-                    properties:
-                      id:
-                        type: number
-                      bold:
-                        type: boolean
-                      font:
-                        type: string
-                      logo:
-                        type: string
-                      mode:
-                        type: number
-                      slug:
-                        type: string
-                      label:
-                        type: string
-                      pages:
-                        type: number
-                      status:
-                        type: boolean
-                      columns:
-                        type: number
-                      grading:
-                        type: boolean
-                      spacing:
-                        type: number
-                      team_id:
-                        type: number
-                      h_margin:
-                        type: number
-                      language:
-                        type: string
-                      v_margin:
-                        type: number
-                      variants:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: number
-                            code:
-                              type: string
-                            pages:
-                              type: number
-                            stamp:
-                              type: boolean
-                            language:
-                              type: string
-                            survey_id:
-                              type: number
-                            created_at:
-                              type: string
-                            entries_count:
-                              type: number
-                            uploads_count:
-                              type: number
-                      font_size:
-                        type: number
-                      hyphenate:
-                        type: boolean
-                      languages:
-                        type: array
-                      align_left:
-                        type: boolean
-                      created_at:
-                        type: string
-                      front_page:
-                        type: string
-                      heading_bg:
-                        type: string
-                      heading_fg:
-                        type: string
-                      randomized:
-                        type:
-                          - array
-                          - 'null'
-                      text_color:
-                        type: string
-                      updated_at:
-                        type: string
-                      versioning:
-                        type: boolean
-                      footer_left:
-                        type: string
-                      grid_margin:
-                        type: number
-                      low_quality:
-                        type: boolean
-                      remove_help:
-                        type: boolean
-                      text_height:
-                        type: number
-                      web_surveys:
-                        type: boolean
-                      cover_custom:
-                        type: boolean
-                      footer_right:
-                        type: string
-                      heading_font:
-                        type: string
-                      pdf_formdata:
-                        type: boolean
-                      prefill_mode:
-                        type: string
-                      cover_with_qr:
-                        type: boolean
-                      footer_center:
-                        type: string
-                      pending_count:
-                        type: number
-                      remove_header:
-                        type: boolean
-                      uploads_count:
-                        type: number
-                      checkmark_size:
-                        type: number
-                      force_stamping:
-                        type: boolean
-                      multicol_width:
-                        type: number
-                      variants_count:
-                        type: number
-                      multicol_margin:
-                        type: number
-                      processed_count:
-                        type: number
-                      web_survey_slug:
-                        type: string
-                      allow_non_unique:
-                        type: boolean
-                      background_color:
-                        type: string
-                      web_surveys_code:
-                        type: boolean
-                      web_surveys_link:
-                        type: boolean
-                      web_surveys_save:
-                        type: boolean
-                      cover_custom_text:
-                        type: string
-                      upload_pdf_single:
-                        type: boolean
-                      web_surveys_valid:
-                        type:
-                          - 'null'
-                          - string
-                      allquestions_count:
-                        type: number
-                      grid_column_margin:
-                        type: number
-                      prevent_submission:
-                        type: boolean
-                      grid_left_checkmarks:
-                        type: boolean
-                      web_surveys_link_url:
-                        type: boolean
-                      prefilled_submit_only:
-                        type: boolean
-              parent_key: id
-              partition_field: survey
+        type: NoPagination
+      partition_router: []
+  - type: DeclarativeStream
+    name: review
     primary_key:
       - id
     schema_loader:
       type: InlineSchemaLoader
       schema:
-        type: object
         $schema: http://json-schema.org/schema#
         properties:
-          id:
-            type: number
+          accepted:
+            type: boolean
           answer:
             anyOf:
               - type:
                   - 'null'
                   - string
-              - type: array
-                items:
+              - items:
                   type: number
+                type: array
+          created_at:
+            type:
+              - 'null'
+              - string
+          entry_id:
+            type: string
+          id:
+            type: number
+          internal_entry_id:
+            type: number
           manual:
             type: number
           page_id:
             type: number
-          quality:
-            type:
-              - 'null'
-              - number
-          accepted:
-            type: boolean
-          entry_id:
+          paper_survey_id:
             type: string
+          quality:
+            type: number
           question:
-            type: object
             properties:
-              id:
-                type: number
-              name:
-                type: string
-              text:
-                type: boolean
-              type:
-                type: string
               columns:
                 type:
                   - number
                   - string
+              has_other:
+                type: boolean
+              id:
+                type: number
+              multiple:
+                type: boolean
+              name:
+                type: string
               options:
-                type: array
                 items:
-                  type: object
                   properties:
                     label:
                       type: string
                     value:
                       type: number
-              multiple:
-                type: boolean
-              has_other:
-                type: boolean
+                  type: object
+                type: array
               other_label:
                 type: string
+              text:
+                type: boolean
+              type:
+                type: string
+            type: object
           survey_id:
             type: number
+          text_image_path:
+            type: string
+          updated_at:
+            type:
+              - 'null'
+              - string
           upload_id:
             type: number
-          created_at:
-            type:
-              - 'null'
-              - string
-          updated_at:
-            type: string
-          verified_by:
-            type:
-              - 'null'
-              - string
           verifiable_id:
             type:
               - 'null'
               - number
-          paper_survey_id:
-            type: string
-          text_image_path:
-            type: string
-          internal_entry_id:
-            type: number
-  - name: entries
-    type: DeclarativeStream
+          verified_by:
+            type:
+              - 'null'
+              - string
+        type: object
     retriever:
       type: SimpleRetriever
-      paginator:
-        type: DefaultPaginator
-        page_size_option:
-          type: RequestOption
-          field_name: per_page
-          inject_into: request_parameter
-        page_token_option:
-          type: RequestOption
-          field_name: page
-          inject_into: request_parameter
-        pagination_strategy:
-          type: PageIncrement
-          page_size: 100
-          start_from_page: 1
       requester:
-        path: https://api.papersurvey.io/surveys/{{stream_partition.survey}}/entries
         type: HttpRequester
         url_base: https://api.papersurvey.io
-        http_method: GET
+        path: https://api.papersurvey.io/surveys/{{stream_partition.survey}}/review
+        http_method: POST
+        request_parameters: {}
+        request_headers: {}
         authenticator:
           type: ApiKeyAuthenticator
           api_token: '{{ config[''api_key''] }}'
@@ -566,31 +321,228 @@ streams:
             type: RequestOption
             field_name: api_token
             inject_into: request_parameter
-        request_headers: {}
         request_body_json: {}
-        request_parameters: {}
       record_selector:
         type: RecordSelector
         extractor:
           type: DpathExtractor
           field_path:
             - data
+      paginator:
+        type: DefaultPaginator
+        page_token_option:
+          type: RequestOption
+          inject_into: request_parameter
+          field_name: page
+        page_size_option:
+          type: RequestOption
+          field_name: per_page
+          inject_into: request_parameter
+        pagination_strategy:
+          type: PageIncrement
+          page_size: 100
+          start_from_page: 1
       partition_router:
         - type: SubstreamPartitionRouter
           parent_stream_configs:
             - type: ParentStreamConfig
+              parent_key: id
+              partition_field: survey
               stream:
-                name: surveys
                 type: DeclarativeStream
+                name: surveys
+                primary_key:
+                  - id
+                schema_loader:
+                  type: InlineSchemaLoader
+                  schema:
+                    $schema: http://json-schema.org/schema#
+                    properties:
+                      align_left:
+                        type: boolean
+                      allow_non_unique:
+                        type: boolean
+                      allquestions_count:
+                        type: number
+                      background_color:
+                        type: string
+                      bold:
+                        type: boolean
+                      checkmark_size:
+                        type: number
+                      columns:
+                        type: number
+                      cover_custom:
+                        type: boolean
+                      cover_custom_text:
+                        type: string
+                      cover_with_qr:
+                        type: boolean
+                      created_at:
+                        type: string
+                      font:
+                        type: string
+                      font_size:
+                        type: number
+                      footer_center:
+                        type: string
+                      footer_left:
+                        type: string
+                      footer_right:
+                        type: string
+                      force_stamping:
+                        type: boolean
+                      front_page:
+                        type: string
+                      grading:
+                        type: boolean
+                      grid_column_margin:
+                        type: number
+                      grid_left_checkmarks:
+                        type: boolean
+                      grid_margin:
+                        type: number
+                      h_margin:
+                        type: number
+                      heading_bg:
+                        type: string
+                      heading_fg:
+                        type: string
+                      heading_font:
+                        type: string
+                      hyphenate:
+                        type: boolean
+                      id:
+                        type: number
+                      label:
+                        type: string
+                      language:
+                        type: string
+                      languages:
+                        type: array
+                      logo:
+                        type: string
+                      low_quality:
+                        type: boolean
+                      mode:
+                        type: number
+                      multicol_margin:
+                        type: number
+                      multicol_width:
+                        type: number
+                      pages:
+                        type:
+                          - 'null'
+                          - number
+                      pdf_formdata:
+                        type: boolean
+                      pending_count:
+                        type: number
+                      prefill_mode:
+                        type: string
+                      prefilled_submit_multiple:
+                        type: boolean
+                      prefilled_submit_only:
+                        type: boolean
+                      prevent_submission:
+                        type: boolean
+                      processed_count:
+                        type: number
+                      randomized:
+                        type:
+                          - array
+                          - 'null'
+                      remove_header:
+                        type: boolean
+                      remove_help:
+                        type: boolean
+                      slug:
+                        type: string
+                      spacing:
+                        type: number
+                      status:
+                        type: boolean
+                      team_id:
+                        type: number
+                      text_color:
+                        type: string
+                      text_height:
+                        type: number
+                      updated_at:
+                        type: string
+                      upload_pdf_single:
+                        type: boolean
+                      uploads_count:
+                        type: number
+                      v_margin:
+                        type: number
+                      variants:
+                        items:
+                          properties:
+                            code:
+                              type: string
+                            created_at:
+                              type: string
+                            entries_count:
+                              type: number
+                            id:
+                              type: number
+                            label:
+                              type:
+                                - 'null'
+                                - string
+                            language:
+                              type: string
+                            pages:
+                              type: number
+                            stamp:
+                              type: boolean
+                            survey_id:
+                              type: number
+                            uploads_count:
+                              type: number
+                          type: object
+                        type: array
+                      variants_count:
+                        type: number
+                      versioning:
+                        type: boolean
+                      web_survey_slug:
+                        type: string
+                      web_surveys:
+                        type: boolean
+                      web_surveys_code:
+                        type: boolean
+                      web_surveys_completion_message:
+                        type: string
+                      web_surveys_header:
+                        type: boolean
+                      web_surveys_heading_bg:
+                        type: string
+                      web_surveys_heading_fg:
+                        type: string
+                      web_surveys_link:
+                        type: boolean
+                      web_surveys_link_url:
+                        type: boolean
+                      web_surveys_primary_color:
+                        type: string
+                      web_surveys_save:
+                        type: boolean
+                      web_surveys_valid:
+                        type:
+                          - 'null'
+                          - string
+                    type: object
                 retriever:
                   type: SimpleRetriever
-                  paginator:
-                    type: NoPagination
                   requester:
-                    path: https://api.papersurvey.io/surveys
                     type: HttpRequester
                     url_base: https://api.papersurvey.io
+                    path: https://api.papersurvey.io/surveys
                     http_method: GET
+                    request_parameters: {}
+                    request_headers: {}
                     authenticator:
                       type: ApiKeyAuthenticator
                       api_token: '{{ config[''api_key''] }}'
@@ -602,326 +554,932 @@ streams:
                       type: CompositeErrorHandler
                       error_handlers:
                         - type: DefaultErrorHandler
-                    request_headers: {}
                     request_body_json: {}
-                    request_parameters: {}
                   record_selector:
                     type: RecordSelector
                     extractor:
                       type: DpathExtractor
                       field_path: []
-                primary_key:
-                  - id
-                schema_loader:
-                  type: InlineSchemaLoader
-                  schema:
-                    type: object
-                    $schema: http://json-schema.org/schema#
-                    properties:
-                      id:
-                        type: number
-                      bold:
-                        type: boolean
-                      font:
-                        type: string
-                      logo:
-                        type: string
-                      mode:
-                        type: number
-                      slug:
-                        type: string
-                      label:
-                        type: string
-                      pages:
-                        type: number
-                      status:
-                        type: boolean
-                      columns:
-                        type: number
-                      grading:
-                        type: boolean
-                      spacing:
-                        type: number
-                      team_id:
-                        type: number
-                      h_margin:
-                        type: number
-                      language:
-                        type: string
-                      v_margin:
-                        type: number
-                      variants:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: number
-                            code:
-                              type: string
-                            pages:
-                              type: number
-                            stamp:
-                              type: boolean
-                            language:
-                              type: string
-                            survey_id:
-                              type: number
-                            created_at:
-                              type: string
-                            entries_count:
-                              type: number
-                            uploads_count:
-                              type: number
-                      font_size:
-                        type: number
-                      hyphenate:
-                        type: boolean
-                      languages:
-                        type: array
-                      align_left:
-                        type: boolean
-                      created_at:
-                        type: string
-                      front_page:
-                        type: string
-                      heading_bg:
-                        type: string
-                      heading_fg:
-                        type: string
-                      randomized:
-                        type:
-                          - array
-                          - 'null'
-                      text_color:
-                        type: string
-                      updated_at:
-                        type: string
-                      versioning:
-                        type: boolean
-                      footer_left:
-                        type: string
-                      grid_margin:
-                        type: number
-                      low_quality:
-                        type: boolean
-                      remove_help:
-                        type: boolean
-                      text_height:
-                        type: number
-                      web_surveys:
-                        type: boolean
-                      cover_custom:
-                        type: boolean
-                      footer_right:
-                        type: string
-                      heading_font:
-                        type: string
-                      pdf_formdata:
-                        type: boolean
-                      prefill_mode:
-                        type: string
-                      cover_with_qr:
-                        type: boolean
-                      footer_center:
-                        type: string
-                      pending_count:
-                        type: number
-                      remove_header:
-                        type: boolean
-                      uploads_count:
-                        type: number
-                      checkmark_size:
-                        type: number
-                      force_stamping:
-                        type: boolean
-                      multicol_width:
-                        type: number
-                      variants_count:
-                        type: number
-                      multicol_margin:
-                        type: number
-                      processed_count:
-                        type: number
-                      web_survey_slug:
-                        type: string
-                      allow_non_unique:
-                        type: boolean
-                      background_color:
-                        type: string
-                      web_surveys_code:
-                        type: boolean
-                      web_surveys_link:
-                        type: boolean
-                      web_surveys_save:
-                        type: boolean
-                      cover_custom_text:
-                        type: string
-                      upload_pdf_single:
-                        type: boolean
-                      web_surveys_valid:
-                        type:
-                          - 'null'
-                          - string
-                      allquestions_count:
-                        type: number
-                      grid_column_margin:
-                        type: number
-                      prevent_submission:
-                        type: boolean
-                      grid_left_checkmarks:
-                        type: boolean
-                      web_surveys_link_url:
-                        type: boolean
-                      prefilled_submit_only:
-                        type: boolean
-              parent_key: id
-              partition_field: survey
+                  paginator:
+                    type: NoPagination
+                  partition_router: []
+  - type: DeclarativeStream
+    name: entries
     primary_key:
-      - id
+      - internal_id
     schema_loader:
       type: InlineSchemaLoader
       schema:
-        type: object
         $schema: http://json-schema.org/schema#
         properties:
+          answers:
+            items:
+              properties:
+                accepted:
+                  type: boolean
+                array:
+                  anyOf:
+                    - type: 'null'
+                    - properties:
+                        '469154':
+                          type: string
+                        '469155':
+                          type: string
+                        '551840':
+                          type: string
+                        '551841':
+                          type: string
+                        '551842':
+                          type: string
+                        '551843':
+                          type: string
+                      type: object
+                    - items:
+                        type:
+                          - number
+                          - string
+                      type: array
+                field:
+                  properties:
+                    id:
+                      type: number
+                    multiple:
+                      type: boolean
+                    name:
+                      type: string
+                    single_choice:
+                      type: boolean
+                    type:
+                      type: string
+                  type: object
+                id:
+                  type:
+                    - 'null'
+                    - number
+                image:
+                  type:
+                    - 'null'
+                    - string
+                manually_verified:
+                  type: boolean
+                not_recorded:
+                  type: boolean
+                prefilled:
+                  type: boolean
+                text:
+                  type:
+                    - 'null'
+                    - string
+              type: object
+            type: array
+          created_at:
+            type: string
+          internal_id:
+            type: number
           notes:
             type:
               - 'null'
               - string
           pages:
-            type: array
             items:
-              type: object
               properties:
-                id:
+                document_id:
                   type: number
+                filename:
+                  type: string
                 hash:
                   type: string
+                id:
+                  type: number
                 page:
                   type: number
                 size:
                   type: number
                 status:
                   type: string
-                filename:
-                  type: string
-                document_id:
-                  type: number
-          answers:
-            type: array
-            items:
               type: object
-              properties:
-                id:
-                  type:
-                    - 'null'
-                    - number
-                text:
-                  type:
-                    - 'null'
-                    - string
-                array:
-                  anyOf:
-                    - type: 'null'
-                    - type: array
-                      items:
-                        type: string
-                    - type: object
-                      properties:
-                        '473964':
-                          type: string
-                        '473965':
-                          type: string
-                        '476115':
-                          type: string
-                        '476116':
-                          type: string
-                        '481956':
-                          type: string
-                        '481957':
-                          type: string
-                        '481958':
-                          type: string
-                        '481959':
-                          type: string
-                        '481960':
-                          type: string
-                        '481961':
-                          type: string
-                        '481962':
-                          type: string
-                        '481963':
-                          type: string
-                        '481964':
-                          type: string
-                        '481965':
-                          type: string
-                        '481966':
-                          type: string
-                        '481967':
-                          type: string
-                        '481968':
-                          type: string
-                        '481969':
-                          type: string
-                        '481970':
-                          type: string
-                        '481971':
-                          type: string
-                        '481972':
-                          type: string
-                        '481973':
-                          type: string
-                        other_selected:
-                          type: string
-                field:
-                  type: object
-                  properties:
-                    id:
-                      type: number
-                    name:
-                      type: string
-                    type:
-                      type: string
-                    multiple:
-                      type: boolean
-                    single_choice:
-                      type: boolean
-                image:
-                  type:
-                    - 'null'
-                    - string
-                accepted:
-                  type: boolean
-                prefilled:
-                  type: boolean
-                not_recorded:
-                  type: boolean
-                manually_verified:
-                  type: boolean
+            type: array
           public_id:
             type: string
           survey_id:
             type: number
-          created_at:
+          updated_at:
             type: string
-          version_id:
-            type:
-              - 'null'
-              - number
-          internal_id:
-            type: number
           uploaded_at:
             type:
               - 'null'
               - string
-check:
-  type: CheckStream
-  stream_names:
-    - surveys
+          version_id:
+            type: number
+        type: object
+    retriever:
+      type: SimpleRetriever
+      requester:
+        type: HttpRequester
+        url_base: https://api.papersurvey.io
+        path: https://api.papersurvey.io/surveys/{{stream_partition.survey}}/entries
+        http_method: GET
+        request_parameters: {}
+        request_headers: {}
+        authenticator:
+          type: ApiKeyAuthenticator
+          api_token: '{{ config[''api_key''] }}'
+          inject_into:
+            type: RequestOption
+            field_name: api_token
+            inject_into: request_parameter
+        request_body_json: {}
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - data
+      paginator:
+        type: DefaultPaginator
+        page_token_option:
+          type: RequestOption
+          inject_into: request_parameter
+          field_name: page
+        page_size_option:
+          type: RequestOption
+          field_name: per_page
+          inject_into: request_parameter
+        pagination_strategy:
+          type: PageIncrement
+          page_size: 300
+          start_from_page: 1
+      partition_router:
+        - type: SubstreamPartitionRouter
+          parent_stream_configs:
+            - type: ParentStreamConfig
+              parent_key: id
+              partition_field: survey
+              stream:
+                type: DeclarativeStream
+                name: surveys
+                primary_key:
+                  - id
+                schema_loader:
+                  type: InlineSchemaLoader
+                  schema:
+                    $schema: http://json-schema.org/schema#
+                    properties:
+                      align_left:
+                        type: boolean
+                      allow_non_unique:
+                        type: boolean
+                      allquestions_count:
+                        type: number
+                      background_color:
+                        type: string
+                      bold:
+                        type: boolean
+                      checkmark_size:
+                        type: number
+                      columns:
+                        type: number
+                      cover_custom:
+                        type: boolean
+                      cover_custom_text:
+                        type: string
+                      cover_with_qr:
+                        type: boolean
+                      created_at:
+                        type: string
+                      font:
+                        type: string
+                      font_size:
+                        type: number
+                      footer_center:
+                        type: string
+                      footer_left:
+                        type: string
+                      footer_right:
+                        type: string
+                      force_stamping:
+                        type: boolean
+                      front_page:
+                        type: string
+                      grading:
+                        type: boolean
+                      grid_column_margin:
+                        type: number
+                      grid_left_checkmarks:
+                        type: boolean
+                      grid_margin:
+                        type: number
+                      h_margin:
+                        type: number
+                      heading_bg:
+                        type: string
+                      heading_fg:
+                        type: string
+                      heading_font:
+                        type: string
+                      hyphenate:
+                        type: boolean
+                      id:
+                        type: number
+                      label:
+                        type: string
+                      language:
+                        type: string
+                      languages:
+                        type: array
+                      logo:
+                        type: string
+                      low_quality:
+                        type: boolean
+                      mode:
+                        type: number
+                      multicol_margin:
+                        type: number
+                      multicol_width:
+                        type: number
+                      pages:
+                        type:
+                          - 'null'
+                          - number
+                      pdf_formdata:
+                        type: boolean
+                      pending_count:
+                        type: number
+                      prefill_mode:
+                        type: string
+                      prefilled_submit_multiple:
+                        type: boolean
+                      prefilled_submit_only:
+                        type: boolean
+                      prevent_submission:
+                        type: boolean
+                      processed_count:
+                        type: number
+                      randomized:
+                        type:
+                          - array
+                          - 'null'
+                      remove_header:
+                        type: boolean
+                      remove_help:
+                        type: boolean
+                      slug:
+                        type: string
+                      spacing:
+                        type: number
+                      status:
+                        type: boolean
+                      team_id:
+                        type: number
+                      text_color:
+                        type: string
+                      text_height:
+                        type: number
+                      updated_at:
+                        type: string
+                      upload_pdf_single:
+                        type: boolean
+                      uploads_count:
+                        type: number
+                      v_margin:
+                        type: number
+                      variants:
+                        items:
+                          properties:
+                            code:
+                              type: string
+                            created_at:
+                              type: string
+                            entries_count:
+                              type: number
+                            id:
+                              type: number
+                            label:
+                              type:
+                                - 'null'
+                                - string
+                            language:
+                              type: string
+                            pages:
+                              type: number
+                            stamp:
+                              type: boolean
+                            survey_id:
+                              type: number
+                            uploads_count:
+                              type: number
+                          type: object
+                        type: array
+                      variants_count:
+                        type: number
+                      versioning:
+                        type: boolean
+                      web_survey_slug:
+                        type: string
+                      web_surveys:
+                        type: boolean
+                      web_surveys_code:
+                        type: boolean
+                      web_surveys_completion_message:
+                        type: string
+                      web_surveys_header:
+                        type: boolean
+                      web_surveys_heading_bg:
+                        type: string
+                      web_surveys_heading_fg:
+                        type: string
+                      web_surveys_link:
+                        type: boolean
+                      web_surveys_link_url:
+                        type: boolean
+                      web_surveys_primary_color:
+                        type: string
+                      web_surveys_save:
+                        type: boolean
+                      web_surveys_valid:
+                        type:
+                          - 'null'
+                          - string
+                    type: object
+                retriever:
+                  type: SimpleRetriever
+                  requester:
+                    type: HttpRequester
+                    url_base: https://api.papersurvey.io
+                    path: https://api.papersurvey.io/surveys
+                    http_method: GET
+                    request_parameters: {}
+                    request_headers: {}
+                    authenticator:
+                      type: ApiKeyAuthenticator
+                      api_token: '{{ config[''api_key''] }}'
+                      inject_into:
+                        type: RequestOption
+                        field_name: api_token
+                        inject_into: request_parameter
+                    error_handler:
+                      type: CompositeErrorHandler
+                      error_handlers:
+                        - type: DefaultErrorHandler
+                    request_body_json: {}
+                  record_selector:
+                    type: RecordSelector
+                    extractor:
+                      type: DpathExtractor
+                      field_path: []
+                  paginator:
+                    type: NoPagination
+                  partition_router: []
+    incremental_sync:
+      type: DatetimeBasedCursor
+      cursor_field: updated_at
+      cursor_datetime_formats:
+        - '%Y-%m-%dT%H:%M:%S.%fZ'
+      datetime_format: '%s'
+      start_datetime:
+        type: MinMaxDatetime
+        datetime: '{{ config[''start_date''] }}'
+        datetime_format: '%Y-%m-%dT%H:%M:%SZ'
+      start_time_option:
+        type: RequestOption
+        field_name: from
+        inject_into: request_parameter
+  - type: DeclarativeStream
+    name: survey_questions
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        $schema: http://json-schema.org/schema#
+        properties:
+          align_left:
+            type: boolean
+          allow_non_unique:
+            type: boolean
+          allquestions_count:
+            type: number
+          background_color:
+            type: string
+          bold:
+            type: boolean
+          checkmark_size:
+            type: number
+          columns:
+            type: number
+          cover_custom:
+            type: boolean
+          cover_custom_text:
+            type: string
+          cover_with_qr:
+            type: boolean
+          created_at:
+            type: string
+          font:
+            type: string
+          font_size:
+            type: number
+          footer_center:
+            type: string
+          footer_left:
+            type: string
+          footer_right:
+            type: string
+          force_stamping:
+            type: boolean
+          front_page:
+            type: string
+          grading:
+            type: boolean
+          grid_column_margin:
+            type: number
+          grid_left_checkmarks:
+            type: boolean
+          grid_margin:
+            type: number
+          h_margin:
+            type: number
+          heading_bg:
+            type: string
+          heading_fg:
+            type: string
+          heading_font:
+            type: string
+          hyphenate:
+            type: boolean
+          id:
+            type: number
+          label:
+            type: string
+          language:
+            type: string
+          languages:
+            type: array
+          logo:
+            type: string
+          low_quality:
+            type: boolean
+          mode:
+            type: number
+          multicol_margin:
+            type: number
+          multicol_width:
+            type: number
+          pages:
+            type: number
+          pdf_formdata:
+            type: boolean
+          pending_count:
+            type: number
+          prefill_mode:
+            type: string
+          prefilled_submit_multiple:
+            type: boolean
+          prefilled_submit_only:
+            type: boolean
+          prevent_submission:
+            type: boolean
+          processed_count:
+            type: number
+          questions:
+            items:
+              properties:
+                columns:
+                  type: string
+                compact:
+                  type: boolean
+                decimal:
+                  type: number
+                export_values:
+                  type:
+                    - 'null'
+                    - string
+                fit:
+                  type: boolean
+                groups:
+                  items:
+                    properties:
+                      columns:
+                        type: string
+                      compact:
+                        type: boolean
+                      decimal:
+                        type: number
+                      fit:
+                        type: boolean
+                      group_id:
+                        type: number
+                      height:
+                        type: string
+                      helper_text:
+                        type: string
+                      hidden:
+                        type: boolean
+                      hide_chart:
+                        type: boolean
+                      id:
+                        type: number
+                      label_left:
+                        type: string
+                      label_right:
+                        type: string
+                      name:
+                        type: string
+                      other_field:
+                        type: boolean
+                      other_label:
+                        type: string
+                      range_count:
+                        type: number
+                      recognition:
+                        type: string
+                      reverse:
+                        type: boolean
+                      survey_id:
+                        type: number
+                      type:
+                        type: string
+                      underline:
+                        type: number
+                      verify_always:
+                        type: boolean
+                    type: object
+                  type: array
+                height:
+                  type: string
+                helper_text:
+                  type: string
+                hidden:
+                  type: boolean
+                hide_chart:
+                  type: boolean
+                id:
+                  type: number
+                label_left:
+                  type: string
+                label_right:
+                  type: string
+                name:
+                  type: string
+                options:
+                  items:
+                    properties:
+                      id:
+                        type: number
+                      name:
+                        type: string
+                      number:
+                        type: number
+                    type: object
+                  type: array
+                other_field:
+                  type: boolean
+                other_label:
+                  type: string
+                range_count:
+                  type: number
+                recognition:
+                  type: string
+                reverse:
+                  type: boolean
+                survey_id:
+                  type: number
+                type:
+                  type: string
+                underline:
+                  type: number
+                verify_always:
+                  type: boolean
+                width:
+                  type:
+                    - 'null'
+                    - string
+              type: object
+            type: array
+          randomized:
+            type: array
+          remove_header:
+            type: boolean
+          remove_help:
+            type: boolean
+          slug:
+            type: string
+          spacing:
+            type: number
+          status:
+            type: boolean
+          team_id:
+            type: number
+          text_color:
+            type: string
+          text_height:
+            type: number
+          updated_at:
+            type: string
+          upload_pdf_single:
+            type: boolean
+          uploads_count:
+            type: number
+          v_margin:
+            type: number
+          variants:
+            items:
+              properties:
+                code:
+                  type: string
+                created_at:
+                  type: string
+                entries_count:
+                  type: number
+                id:
+                  type: number
+                language:
+                  type: string
+                pages:
+                  type: number
+                stamp:
+                  type: boolean
+                survey_id:
+                  type: number
+                uploads_count:
+                  type: number
+              type: object
+            type: array
+          variants_count:
+            type: number
+          versioning:
+            type: boolean
+          web_survey_slug:
+            type: string
+          web_surveys:
+            type: boolean
+          web_surveys_code:
+            type: boolean
+          web_surveys_completion_message:
+            type: string
+          web_surveys_header:
+            type: boolean
+          web_surveys_heading_bg:
+            type: string
+          web_surveys_heading_fg:
+            type: string
+          web_surveys_link:
+            type: boolean
+          web_surveys_link_url:
+            type: boolean
+          web_surveys_primary_color:
+            type: string
+          web_surveys_save:
+            type: boolean
+          web_surveys_valid:
+            type: string
+        type: object
+    retriever:
+      type: SimpleRetriever
+      requester:
+        type: HttpRequester
+        url_base: https://api.papersurvey.io
+        path: https://api.papersurvey.io/surveys/{{stream_partition.manual_survey}}
+        http_method: GET
+        request_parameters: {}
+        request_headers: {}
+        authenticator:
+          type: ApiKeyAuthenticator
+          api_token: '{{ config[''api_key''] }}'
+          inject_into:
+            type: RequestOption
+            field_name: api_token
+            inject_into: request_parameter
+        error_handler:
+          type: CompositeErrorHandler
+          error_handlers:
+            - type: DefaultErrorHandler
+        request_body_json: {}
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path: []
+      paginator:
+        type: NoPagination
+      partition_router:
+        - type: ListPartitionRouter
+          values: '{{ config[''survey_ids''] }}'
+          cursor_field: manual_survey
+  - type: DeclarativeStream
+    name: entries_manual
+    primary_key:
+      - internal_id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        $schema: http://json-schema.org/schema#
+        properties:
+          answers:
+            items:
+              properties:
+                accepted:
+                  type: boolean
+                array:
+                  anyOf:
+                    - type: 'null'
+                    - items:
+                        type: string
+                      type: array
+                    - properties:
+                        '535576':
+                          type: string
+                        '535577':
+                          type: string
+                        '535578':
+                          type: string
+                        '535579':
+                          type: string
+                        '535580':
+                          type: string
+                        '535581':
+                          type: string
+                        '540063':
+                          type: string
+                        '540064':
+                          type: string
+                        '540065':
+                          type: string
+                        '540066':
+                          type: string
+                        '540067':
+                          type: string
+                        '540068':
+                          type: string
+                      type: object
+                field:
+                  properties:
+                    id:
+                      type: number
+                    multiple:
+                      type: boolean
+                    name:
+                      type: string
+                    single_choice:
+                      type: boolean
+                    type:
+                      type: string
+                  type: object
+                id:
+                  type:
+                    - 'null'
+                    - number
+                image:
+                  type:
+                    - 'null'
+                    - string
+                manually_verified:
+                  type: boolean
+                not_recorded:
+                  type: boolean
+                prefilled:
+                  type: boolean
+                text:
+                  type:
+                    - 'null'
+                    - string
+              type: object
+            type: array
+          created_at:
+            type: string
+          internal_id:
+            type: number
+          notes:
+            type: string
+          pages:
+            items:
+              properties:
+                document_id:
+                  type: number
+                filename:
+                  type: string
+                hash:
+                  type: string
+                id:
+                  type: number
+                page:
+                  type: number
+                size:
+                  type: number
+                status:
+                  type: string
+              type: object
+            type: array
+          public_id:
+            type: string
+          survey_id:
+            type: number
+          updated_at:
+            type: string
+          uploaded_at:
+            type:
+              - 'null'
+              - string
+          version_id:
+            type: number
+        type: object
+    retriever:
+      type: SimpleRetriever
+      requester:
+        type: HttpRequester
+        url_base: https://api.papersurvey.io
+        path: >-
+          https://api.papersurvey.io/surveys/{{stream_partition.manual_survey}}/entries
+        http_method: GET
+        request_parameters: {}
+        request_headers: {}
+        authenticator:
+          type: ApiKeyAuthenticator
+          api_token: '{{ config[''api_key''] }}'
+          inject_into:
+            type: RequestOption
+            field_name: api_token
+            inject_into: request_parameter
+        error_handler:
+          type: CompositeErrorHandler
+          error_handlers:
+            - type: DefaultErrorHandler
+        request_body_json: {}
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - data
+      paginator:
+        type: DefaultPaginator
+        page_token_option:
+          type: RequestOption
+          inject_into: request_parameter
+          field_name: page
+        page_size_option:
+          type: RequestOption
+          field_name: per_page
+          inject_into: request_parameter
+        pagination_strategy:
+          type: PageIncrement
+          page_size: 300
+          start_from_page: 1
+      partition_router:
+        - type: ListPartitionRouter
+          values: '{{ config[''survey_ids''] }}'
+          cursor_field: manual_survey
+    incremental_sync:
+      type: DatetimeBasedCursor
+      cursor_field: updated_at
+      cursor_datetime_formats:
+        - '%Y-%m-%dT%H:%M:%S.%fZ'
+      datetime_format: '%s'
+      start_datetime:
+        type: MinMaxDatetime
+        datetime: '{{ config[''start_date''] }}'
+        datetime_format: '%Y-%m-%dT%H:%M:%SZ'
+      start_time_option:
+        type: RequestOption
+        field_name: from
+        inject_into: request_parameter
+spec:
+  connection_specification:
+    $schema: http://json-schema.org/draft-07/schema#
+    type: object
+    required:
+      - start_date
+      - api_key
+    properties:
+      start_date:
+        type: string
+        title: Start date
+        format: date-time
+        pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$
+        order: 0
+        description: >-
+          entries & entries_manual unix timestamp indicating what records
+          updated_at to start fetching from.
+      api_key:
+        type: string
+        title: API Key
+        airbyte_secret: true
+        order: 1
+      survey_ids:
+        type: array
+        order: 2
+        title: survey_ids
+        description: >-
+          For use with survey_questions and entries_manual streams. Specify a
+          list of surveys whose entries/surveys (with questions) you wish to
+          fetch. Enables selecting a subset as an alternative to all via
+          surveys/entries streams.
+    additionalProperties: true
+  type: Spec
 metadata:
   autoImportSchema:
+    surveys: true
     review: true
     entries: true
-    surveys: true
+    survey_questions: true
+    entries_manual: true
