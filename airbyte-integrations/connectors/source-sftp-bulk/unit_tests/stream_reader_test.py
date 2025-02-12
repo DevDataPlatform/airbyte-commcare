@@ -1,4 +1,6 @@
 # Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+
+
 import datetime
 import logging
 from unittest.mock import MagicMock, patch
@@ -7,6 +9,7 @@ import freezegun
 import paramiko
 from source_sftp_bulk.spec import SourceSFTPBulkSpec
 from source_sftp_bulk.stream_reader import SourceSFTPBulkStreamReader
+
 
 logger = logging.Logger("")
 

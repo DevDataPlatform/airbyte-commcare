@@ -1,23 +1,25 @@
 data:
-  registries:
-    cloud:
-      enabled: false # strict encrypt connectors are deployed to Cloud by their non strict encrypt sibling.
-    oss:
-      enabled: false # strict encrypt connectors are not used on OSS.
+  connectorBuildOptions:
+    baseImage: docker.io/airbyte/java-connector-base:2.0.0@sha256:5a1a21c75c5e1282606de9fa539ba136520abe2fbd013058e988bb0297a9f454
   connectorSubtype: database
+  connectorTestSuitesOptions:
+    - suite: unitTests
+    - suite: integrationTests
   connectorType: destination
   definitionId: ca81ee7c-3163-4246-af40-094cc31e5e42
-  dockerImageTag: 1.0.0
+  dockerImageTag: 1.0.4
   dockerRepository: airbyte/destination-mysql-strict-encrypt
+  documentationUrl: https://docs.airbyte.com/integrations/destinations/mysql
   githubIssueLabel: destination-mysql
   icon: mysql.svg
   license: ELv2
   name: MySQL
+  registryOverrides:
+    cloud:
+      enabled: false
+    oss:
+      enabled: false
   releaseStage: alpha
-  documentationUrl: https://docs.airbyte.com/integrations/destinations/mysql
-  supportsDbt: true
-  tags:
-    - language:java
   releases:
     breakingChanges:
       1.0.0:
@@ -37,4 +39,7 @@ data:
 
           "
         upgradeDeadline: "2024-05-15"
+  supportsDbt: true
+  tags:
+    - language:java
 metadataSpecVersion: "1.0"

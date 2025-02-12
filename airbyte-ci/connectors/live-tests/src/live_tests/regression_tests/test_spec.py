@@ -5,9 +5,9 @@ from collections.abc import Callable
 
 import pytest
 from airbyte_protocol.models import Type  # type: ignore
-from live_tests.commons.models import ExecutionResult
 
-from .utils import fail_test_on_failing_execution_results
+from live_tests.commons.models import ExecutionResult
+from live_tests.utils import fail_test_on_failing_execution_results
 
 pytestmark = [
     pytest.mark.anyio,

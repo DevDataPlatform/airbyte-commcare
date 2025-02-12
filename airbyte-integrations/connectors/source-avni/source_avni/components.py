@@ -9,7 +9,6 @@ class CustomAuthenticator(BasicHttpAuthenticator):
 
     @property
     def token(self) -> str:
-
         username = self._username.eval(self.config)
         password = self._password.eval(self.config)
 
@@ -17,7 +16,9 @@ class CustomAuthenticator(BasicHttpAuthenticator):
 
         client = boto3.client("cognito-idp", region_name="ap-south-1")
         response = client.initiate_auth(
-            ClientId=app_client_id, AuthFlow="USER_PASSWORD_AUTH", AuthParameters={"USERNAME": username, "PASSWORD": password}
+            ClientId=app_client_id,
+            AuthFlow="USER_PASSWORD_AUTH",
+            AuthParameters={"USERNAME": username, "PASSWORD": password},
         )
         token = response["AuthenticationResult"]["IdToken"]
         return token

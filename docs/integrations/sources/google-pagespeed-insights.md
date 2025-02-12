@@ -50,11 +50,37 @@ If the connector is used with an API key, Google allows for 25.000 queries per d
 
 ## Changelog
 
+<details>
+  <summary>Expand to review</summary>
+
 | Version | Date       | Pull Request                                              | Subject                                                                         |
 | :------ | :--------- | :-------------------------------------------------------- | :------------------------------------------------------------------------------ |
-| 0.1.5   | 2024-04-19 | [37171](https://github.com/airbytehq/airbyte/pull/37171)  | Updating to 0.80.0 CDK                                                          |
-| 0.1.4   | 2024-04-18 | [37171](https://github.com/airbytehq/airbyte/pull/37171)  | Manage dependencies with Poetry.                                                |
-| 0.1.3   | 2024-04-15 | [37171](https://github.com/airbytehq/airbyte/pull/37171)  | Base image migration: remove Dockerfile and use the python-connector-base image |
-| 0.1.2   | 2024-04-12 | [37171](https://github.com/airbytehq/airbyte/pull/37171)  | schema descriptions                                                             |
+| 0.2.8 | 2025-01-18 | [51693](https://github.com/airbytehq/airbyte/pull/51693) | Update dependencies |
+| 0.2.7 | 2025-01-11 | [51118](https://github.com/airbytehq/airbyte/pull/51118) | Update dependencies |
+| 0.2.6 | 2024-12-28 | [50529](https://github.com/airbytehq/airbyte/pull/50529) | Update dependencies |
+| 0.2.5 | 2024-12-21 | [50030](https://github.com/airbytehq/airbyte/pull/50030) | Update dependencies |
+| 0.2.4 | 2024-12-14 | [49526](https://github.com/airbytehq/airbyte/pull/49526) | Update dependencies |
+| 0.2.3 | 2024-12-12 | [49177](https://github.com/airbytehq/airbyte/pull/49177) | Update dependencies |
+| 0.2.2 | 2024-12-11 | [47793](https://github.com/airbytehq/airbyte/pull/47793) | Starting with this version, the Docker image is now rootless. Please note that this and future versions will not be compatible with Airbyte versions earlier than 0.64 |
+| 0.2.1 | 2024-08-16 | [44196](https://github.com/airbytehq/airbyte/pull/44196) | Bump source-declarative-manifest version |
+| 0.2.0 | 2024-08-15 | [44143](https://github.com/airbytehq/airbyte/pull/44143) | Refactor connector to manifest-only format |
+| 0.1.17 | 2024-08-10 | [43617](https://github.com/airbytehq/airbyte/pull/43617) | Update dependencies |
+| 0.1.16 | 2024-08-03 | [43130](https://github.com/airbytehq/airbyte/pull/43130) | Update dependencies |
+| 0.1.15 | 2024-07-27 | [42770](https://github.com/airbytehq/airbyte/pull/42770) | Update dependencies |
+| 0.1.14 | 2024-07-20 | [42319](https://github.com/airbytehq/airbyte/pull/42319) | Update dependencies |
+| 0.1.13 | 2024-07-13 | [41706](https://github.com/airbytehq/airbyte/pull/41706) | Update dependencies |
+| 0.1.12 | 2024-07-10 | [41591](https://github.com/airbytehq/airbyte/pull/41591) | Update dependencies |
+| 0.1.11 | 2024-07-09 | [41155](https://github.com/airbytehq/airbyte/pull/41155) | Update dependencies |
+| 0.1.10 | 2024-07-06 | [41011](https://github.com/airbytehq/airbyte/pull/41011) | Update dependencies |
+| 0.1.9 | 2024-06-29 | [40439](https://github.com/airbytehq/airbyte/pull/40439) | Update dependencies |
+| 0.1.8 | 2024-06-22 | [40104](https://github.com/airbytehq/airbyte/pull/40104) | Update dependencies |
+| 0.1.7 | 2024-06-06 | [39272](https://github.com/airbytehq/airbyte/pull/39272) | [autopull] Upgrade base image to v1.2.2 |
+| 0.1.6 | 2024-05-21 | [38147](https://github.com/airbytehq/airbyte/pull/38147) | Make compatable with builder |
+| 0.1.5 | 2024-04-19 | [37171](https://github.com/airbytehq/airbyte/pull/37171) | Updating to 0.80.0 CDK |
+| 0.1.4 | 2024-04-18 | [37171](https://github.com/airbytehq/airbyte/pull/37171) | Manage dependencies with Poetry. |
+| 0.1.3 | 2024-04-15 | [37171](https://github.com/airbytehq/airbyte/pull/37171) | Base image migration: remove Dockerfile and use the python-connector-base image |
+| 0.1.2 | 2024-04-12 | [37171](https://github.com/airbytehq/airbyte/pull/37171) | schema descriptions |
 | 0.1.1   | 2023-05-25 | [#22287](https://github.com/airbytehq/airbyte/pull/22287) | 🐛 Fix URL pattern regex                                                        |
 | 0.1.0   | 2022-11-26 | [#19813](https://github.com/airbytehq/airbyte/pull/19813) | 🎉 New Source: Google PageSpeed Insights [low-code CDK]                         |
+
+</details>

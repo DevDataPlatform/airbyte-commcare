@@ -3,14 +3,15 @@
 #
 
 
+import logging
 from typing import Any, List, Mapping, Tuple
 
-from airbyte_cdk import AirbyteLogger
+from requests.exceptions import ConnectionError, RequestException, SSLError
+
 from airbyte_cdk.models import FailureType, SyncMode
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.utils import AirbyteTracedException
-from requests.exceptions import ConnectionError, RequestException, SSLError
 
 from .auth import MissingAccessTokenError, ShopifyAuthenticator
 from .scopes import ShopifyScopes
@@ -24,8 +25,8 @@ from .streams.streams import (
     Countries,
     CustomCollections,
     CustomerAddress,
+    CustomerJourneySummary,
     Customers,
-    CustomerSavedSearch,
     DiscountCodes,
     Disputes,
     DraftOrders,
@@ -47,6 +48,7 @@ from .streams.streams import (
     MetafieldProductVariants,
     MetafieldShops,
     MetafieldSmartCollections,
+    OrderAgreements,
     OrderRefunds,
     OrderRisks,
     Orders,
@@ -54,7 +56,6 @@ from .streams.streams import (
     PriceRules,
     ProductImages,
     Products,
-    ProductsGraphQl,
     ProductVariants,
     Shop,
     SmartCollections,
@@ -72,7 +73,7 @@ class ConnectionCheckTest:
         # setting `max_retries` to 0 for the stage of `check connection`,
         # because it keeps retrying for wrong shop names,
         # but it should stop immediately
-        self.test_stream.max_retries = 0
+        self.test_stream._http_client.max_retries = 0
 
     def describe_error(self, pattern: str, shop_name: str = None, details: Any = None, **kwargs) -> str:
         connection_check_errors_map: Mapping[str, Any] = {
@@ -129,10 +130,6 @@ class SourceShopify(AbstractSource):
     def continue_sync_on_stream_failure(self) -> bool:
         return True
 
-    @property
-    def raise_exception_on_missing_stream(self) -> bool:
-        return False
-
     @staticmethod
     def get_shop_name(config) -> str:
         split_pattern = ".myshopify.com"
@@ -143,7 +140,7 @@ class SourceShopify(AbstractSource):
     def format_stream_name(name) -> str:
         return "".join(x.capitalize() for x in name.split("_"))
 
-    def check_connection(self, logger: AirbyteLogger, config: Mapping[str, Any]) -> Tuple[bool, any]:
+    def check_connection(self, logger: logging.Logger, config: Mapping[str, Any]) -> Tuple[bool, any]:
         """
         Testing connection availability for the connector.
         """
@@ -182,6 +179,7 @@ class SourceShopify(AbstractSource):
             Collections(config),
             Collects(config),
             CustomCollections(config),
+            CustomerJourneySummary(config),
             Customers(config),
             DiscountCodes(config),
             Disputes(config),
@@ -204,6 +202,7 @@ class SourceShopify(AbstractSource):
             MetafieldProductVariants(config),
             MetafieldShops(config),
             MetafieldSmartCollections(config),
+            OrderAgreements(config),
             OrderRefunds(config),
             OrderRisks(config),
             Orders(config),
@@ -211,13 +210,11 @@ class SourceShopify(AbstractSource):
             PriceRules(config),
             ProductImages(config),
             Products(config),
-            ProductsGraphQl(config),
             ProductVariants(config),
             Shop(config),
             SmartCollections(config),
             TenderTransactions(config),
             self.select_transactions_stream(config),
-            CustomerSavedSearch(config),
             CustomerAddress(config),
             Countries(config),
         ]
