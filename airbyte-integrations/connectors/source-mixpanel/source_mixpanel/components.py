@@ -6,11 +6,10 @@ from typing import Any, Iterable, List, Mapping, MutableMapping, Optional
 
 import dpath.util
 import requests
+
 from airbyte_cdk.models import AirbyteMessage, SyncMode, Type
 from airbyte_cdk.sources.declarative.extractors import DpathExtractor
 from airbyte_cdk.sources.declarative.interpolation import InterpolatedString
-from airbyte_cdk.sources.declarative.migrations.legacy_to_per_partition_state_migration import LegacyToPerPartitionStateMigration
-from airbyte_cdk.sources.declarative.models import DatetimeBasedCursor
 from airbyte_cdk.sources.declarative.partition_routers import SubstreamPartitionRouter
 from airbyte_cdk.sources.declarative.requesters import HttpRequester
 from airbyte_cdk.sources.declarative.requesters.paginators.strategies.page_increment import PageIncrement
@@ -34,7 +33,6 @@ class MixpanelHttpRequester(HttpRequester):
         stream_slice: Optional[StreamSlice] = None,
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Mapping[str, Any]:
-
         return {"Accept": "application/json"}
 
     def get_request_params(
@@ -64,7 +62,6 @@ class MixpanelHttpRequester(HttpRequester):
         return super()._request_params(stream_state, stream_slice, next_page_token, extra_params)
 
     def send_request(self, **kwargs) -> Optional[requests.Response]:
-
         if self.reqs_per_hour_limit:
             if self.is_first_request:
                 self.is_first_request = False
@@ -101,6 +98,22 @@ class FunnelsHttpRequester(MixpanelHttpRequester):
     ) -> MutableMapping[str, Any]:
         params = super().get_request_params(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token)
         params["unit"] = "day"
+        return params
+
+
+class EngagesHttpRequester(MixpanelHttpRequester):
+    def get_request_params(
+        self,
+        *,
+        stream_state: Optional[StreamState] = None,
+        stream_slice: Optional[StreamSlice] = None,
+        next_page_token: Optional[Mapping[str, Any]] = None,
+    ) -> MutableMapping[str, Any]:
+        params = super().get_request_params(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token)
+        if "start_time" in stream_slice:
+            params["where"] = f'properties["$last_seen"] >= "{stream_slice["start_time"]}"'
+        elif "start_date" in self.config:
+            params["where"] = f'properties["$last_seen"] >= "{self.config["start_date"]}"'
         return params
 
 
@@ -261,7 +274,9 @@ class EngagePaginationStrategy(PageIncrement):
     page - incremental page number
     """
 
-    def next_page_token(self, response, last_records: List[Mapping[str, Any]]) -> Optional[Mapping[str, Any]]:
+    _total = 0
+
+    def next_page_token(self, response: requests.Response, last_page_size: int, last_record: Optional[Record]) -> Optional[Any]:
         """
         Determines page and subpage numbers for the `items` stream
 
@@ -275,11 +290,15 @@ class EngagePaginationStrategy(PageIncrement):
         if total:
             self._total = total
 
-        if self._total and page_number is not None and self._total > self.page_size * (page_number + 1):
+        if self._total and page_number is not None and self._total > self._page_size * (page_number + 1):
             return {"session_id": decoded_response.get("session_id"), "page": page_number + 1}
         else:
             self._total = None
             return None
+
+    def reset(self) -> None:
+        super().reset()
+        self._total = 0
 
 
 class EngageJsonFileSchemaLoader(JsonFileSchemaLoader):

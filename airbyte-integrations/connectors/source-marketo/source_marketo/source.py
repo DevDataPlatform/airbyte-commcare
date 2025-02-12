@@ -11,13 +11,14 @@ from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 
 import pendulum
 import requests
+
 from airbyte_cdk.models import SyncMode
 from airbyte_cdk.sources.declarative.exceptions import ReadException
 from airbyte_cdk.sources.declarative.yaml_declarative_source import YamlDeclarativeSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.availability_strategy import AvailabilityStrategy
 from airbyte_cdk.sources.streams.http import HttpStream
-from airbyte_cdk.sources.streams.http.auth import Oauth2Authenticator
+from airbyte_cdk.sources.streams.http.requests_native_auth import Oauth2Authenticator
 from airbyte_cdk.utils import AirbyteTracedException
 from airbyte_protocol.models import FailureType
 
@@ -365,7 +366,7 @@ class Leads(MarketoExportBase):
     @property
     def stream_fields(self):
         standard_properties = set(self.get_json_schema()["properties"])
-        resp = self._session.get(f"{self._url_base}rest/v1/leads/describe.json", headers=self.authenticator.get_auth_header())
+        resp = self._session.get(f"{self._url_base}rest/v1/leads/describe.json", headers=self._session.auth.get_auth_header())
         available_fields = set(x.get("rest").get("name") for x in resp.json().get("result"))
         return list(standard_properties & available_fields)
 
@@ -450,8 +451,8 @@ class MarketoAuthenticator(Oauth2Authenticator):
     def get_refresh_request_params(self) -> Mapping[str, Any]:
         payload: MutableMapping[str, Any] = {
             "grant_type": "client_credentials",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
+            "client_id": self.get_client_id(),
+            "client_secret": self.get_client_secret(),
         }
 
         return payload
@@ -461,7 +462,7 @@ class MarketoAuthenticator(Oauth2Authenticator):
         Returns a tuple of (access_token, token_lifespan_in_seconds)
         """
         try:
-            response = requests.request(method="GET", url=self.token_refresh_endpoint, params=self.get_refresh_request_params())
+            response = requests.request(method="GET", url=self.get_token_refresh_endpoint(), params=self.get_refresh_request_params())
             response.raise_for_status()
             response_json = response.json()
             return response_json["access_token"], response_json["expires_in"]

@@ -2,33 +2,36 @@
 # Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
+import os
 from unittest.mock import ANY, MagicMock, Mock, call, patch
 
 import pytest
 import urllib3
-from airbyte_cdk.models import ConfiguredAirbyteCatalog
 from destination_pinecone.config import PineconeIndexingModel
 from destination_pinecone.indexer import PineconeIndexer
 from pinecone import IndexDescription, exceptions
 from pinecone.grpc import PineconeGRPC
 from pinecone.models import IndexList
 
+from airbyte_cdk.models import ConfiguredAirbyteCatalog
+
 
 def create_pinecone_indexer(embedding_dimensions=3, side_effect=None):
     config = PineconeIndexingModel(mode="pinecone", pinecone_environment="myenv", pinecone_key="mykey", index="myindex")
 
-    with patch.object(PineconeGRPC, 'Index') as mock_index:
+    with patch.object(PineconeGRPC, "Index") as mock_index:
         indexer = PineconeIndexer(config, 3)
-        
+
         indexer.pc.list_indexes = MagicMock()
         indexer.pc.list_indexes.return_value.indexes = create_mock_list_indexes()
-    
+
         indexer.pc.describe_index = MagicMock()
         if side_effect:
             indexer.pc.describe_index.side_effect = side_effect
         else:
             indexer.pc.describe_index.return_value = create_index_description(dimensions=embedding_dimensions)
         return indexer
+
 
 def create_index_description(dimensions=3, pod_type="p1"):
     return IndexDescription(
@@ -40,8 +43,10 @@ def create_index_description(dimensions=3, pod_type="p1"):
         status=None,
     )
 
+
 def create_mock_list_indexes():
     return [{"name": "myindex"}, {"name": "myindex2"}]
+
 
 @pytest.fixture(scope="module", autouse=True)
 def mock_describe_index():
@@ -49,11 +54,42 @@ def mock_describe_index():
         mock.return_value = create_index_description()
         yield mock
 
+
 @pytest.fixture(scope="module", autouse=True)
 def mock_determine_spec_type():
-    with patch.object(PineconeIndexer, 'determine_spec_type') as mock:
+    with patch.object(PineconeIndexer, "determine_spec_type") as mock:
         mock.return_value = "pod"
         yield mock
+
+
+def test_get_source_tag_default():
+    # case when no test env variables are set
+    os.environ.pop("PYTEST_CURRENT_TEST", None)
+    os.environ.pop("RUN_IN_AIRBYTE_CI", None)
+    indexer = create_pinecone_indexer()
+    assert indexer.get_source_tag() == "airbyte"
+
+
+def test_get_source_tag_with_pytest():
+    # pytest is running by default here
+    indexer = create_pinecone_indexer()
+    assert indexer.get_source_tag() == "airbyte_test"
+
+    # pytest plus ci is running
+    with patch.dict("os.environ", {"RUN_IN_AIRBYTE_CI": "value does not matter"}):
+        assert indexer.get_source_tag() == "airbyte_test"
+
+
+@patch.dict("os.environ", {"RUN_IN_AIRBYTE_CI": "Value does not matter"})
+def test_get_source_tag_with_ci():
+    # CI and pytest is running
+    indexer = create_pinecone_indexer()
+    assert indexer.get_source_tag() == "airbyte_test"
+
+    # CI is running but pytest is not
+    with patch.dict("os.environ", {"PYTEST_CURRENT_TEST": "Value does not matter"}):
+        assert indexer.get_source_tag() == "airbyte_test"
+
 
 def test_pinecone_index_upsert_and_delete(mock_describe_index):
     indexer = create_pinecone_indexer()
@@ -74,7 +110,8 @@ def test_pinecone_index_upsert_and_delete(mock_describe_index):
             (ANY, [4, 5, 6], {"_ab_stream": "abc", "text": "test2"}),
         ),
         async_req=True,
-        show_progress=False
+        show_progress=False,
+        namespace="ns1",
     )
 
 
@@ -108,7 +145,9 @@ def test_pinecone_index_upsert_and_delete_starter(mock_describe_index, mock_dete
         ),
         async_req=True,
         show_progress=False,
+        namespace="ns1",
     )
+
 
 def test_pinecone_index_upsert_and_delete_pod(mock_describe_index, mock_determine_spec_type):
     indexer = create_pinecone_indexer()
@@ -127,9 +166,7 @@ def test_pinecone_index_upsert_and_delete_pod(mock_describe_index, mock_determin
         "some_stream",
     )
     indexer.delete(["delete_id1", "delete_id2"], "ns1", "some_stram")
-    indexer.pinecone_index.delete.assert_has_calls(
-        [call(filter={'_ab_record_id': {'$in': ['delete_id1', 'delete_id2']}}, namespace='ns1')]
-    )
+    indexer.pinecone_index.delete.assert_has_calls([call(filter={"_ab_record_id": {"$in": ["delete_id1", "delete_id2"]}}, namespace="ns1")])
     indexer.pinecone_index.upsert.assert_called_with(
         vectors=(
             (ANY, [1, 2, 3], {"_ab_stream": "abc", "text": "test"}),
@@ -137,7 +174,9 @@ def test_pinecone_index_upsert_and_delete_pod(mock_describe_index, mock_determin
         ),
         async_req=True,
         show_progress=False,
+        namespace="ns1",
     )
+
 
 def test_pinecone_index_upsert_and_delete_serverless(mock_describe_index, mock_determine_spec_type):
     indexer = create_pinecone_indexer()
@@ -156,9 +195,7 @@ def test_pinecone_index_upsert_and_delete_serverless(mock_describe_index, mock_d
         "some_stream",
     )
     indexer.delete(["delete_id1", "delete_id2"], "ns1", "some_stram")
-    indexer.pinecone_index.delete.assert_has_calls(
-        [call(ids=['delete_id1', 'delete_id2'], namespace='ns1')]
-    )
+    indexer.pinecone_index.delete.assert_has_calls([call(ids=["delete_id1", "delete_id2"], namespace="ns1")])
     indexer.pinecone_index.upsert.assert_called_with(
         vectors=(
             (ANY, [1, 2, 3], {"_ab_stream": "abc", "text": "test"}),
@@ -166,6 +203,7 @@ def test_pinecone_index_upsert_and_delete_serverless(mock_describe_index, mock_d
         ),
         async_req=True,
         show_progress=False,
+        namespace="ns1",
     )
 
 
@@ -276,13 +314,12 @@ def test_pinecone_pre_sync_starter(mock_describe_index, mock_determine_spec_type
         ("myindex", None, 3, True, None),
         ("other_index", None, 3, False, "Index other_index does not exist in environment"),
         (
-           "myindex",
+            "myindex",
             urllib3.exceptions.MaxRetryError(None, "", reason=Exception("Failed to resolve 'controller.myenv.pinecone.io'")),
             3,
             False,
             "Failed to resolve environment",
-        
-         ),
+        ),
         ("myindex", exceptions.UnauthorizedException(http_resp=urllib3.HTTPResponse(body="No entry!")), 3, False, "No entry!"),
         ("myindex", None, 4, False, "Make sure embedding and indexing configurations match."),
         ("myindex", Exception("describe failed"), 3, False, "describe failed"),
@@ -325,4 +362,5 @@ def test_metadata_normalization():
         vectors=((ANY, [1, 2, 3], {"_ab_stream": "abc", "text": "test", "small": "a", "id": 1}),),
         async_req=True,
         show_progress=False,
+        namespace=None,
     )

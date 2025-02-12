@@ -1,6 +1,10 @@
 # Azure Blob Storage
 
-This page contains the setup guide and reference information for the Azure Blob Storage source connector.
+<HideInUI>
+
+This page contains the setup guide and reference information for the [Azure Blob Storage](https://azure.microsoft.com/en-us/products/storage/blobs/) source connector.
+
+</HideInUI>
 
 :::info
 Cloud storage may incur egress costs. Egress refers to data that is transferred out of the cloud storage system, such as when you download files or access them from a different location. For more information, see the [Azure Blob Storage pricing guide](https://azure.microsoft.com/en-us/pricing/details/storage/blobs/).
@@ -37,10 +41,10 @@ Minimum permissions (role [Storage Blob Data Reader](https://learn.microsoft.com
 
 ### Step 1: Set up Azure Blob Storage
 
-- Create a storage account with the permissions [details](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal)
+- Create a storage account and grant roles [details](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal)
 
 :::warning
-To use Oauth 2.0 Authentication method, Access Control (IAM) should be setup.
+To use Oauth2 or Client Credentials Authentication methods, Access Control (IAM) should be setup.
 It is recommended
 to use role [Storage Blob Data Reader](https://learn.microsoft.com/en-gb/azure/storage/blobs/assign-azure-role-data-access?tabs=portal)
 
@@ -58,27 +62,72 @@ Follow these steps to set up an IAM role:
 </details>
 :::
 
+<details>
+<summary>
+Follow these steps to set up a Service Principal to use the Client Credentials authentication method.
+</summary>
+
+In the Azure portal, navigate to your Service Principal's App Registration.
+
+Note the `Directory (tenant) ID` and `Application (client) ID` in the Overview panel.
+
+In the `Manage / Certificates & secrets` panel, click `Client Secrets` and create a new secret. Note the `Value` of the secret.
+
+</details>
+
+
 ### Step 2: Set up the Azure Blob Storage connector in Airbyte
 
-1. [Log in to your Airbyte Cloud](https://cloud.airbyte.com/workspaces) account, or navigate to your Airbyte Open Source dashboard.
-2. In the left navigation bar, click **Sources**. In the top-right corner, click **+ New source**.
-3. Find and select **Azure Blob Storage** from the list of available sources.
-4. Enter the name of your Azure **Account**.
-5. Enter your Tenant ID and Click **Authenticate your Azure Blob Storage account**.
-6. Log in and authorize the Azure Blob Storage account.
-7. Enter the name of the **Container** containing your files to replicate.
-8. Add a stream
+<!-- env:cloud -->
+
+### For Airbyte Cloud:
+
+1. [Log into your Airbyte Cloud](https://cloud.airbyte.com/workspaces) account.
+2. Click Sources and then click + New source.
+3. On the Set up the source page, select Azure Blob Storage from the Source type dropdown.
+4. Enter a name for the Azure Blob Storage connector.
+5. Enter the name of your Azure **Account**.
+6. Enter your Tenant ID and Click **Authenticate your Azure Blob Storage account**.
+7. Log in and authorize the Azure Blob Storage account.
+8. Enter the name of the **Container** containing your files to replicate.
+9. Add a stream
    1. Write the **File Type**
    2. In the **Format** box, use the dropdown menu to select the format of the files you'd like to replicate. The supported formats are **CSV**, **Parquet**, **Avro** and **JSONL**. Toggling the **Optional fields** button within the **Format** box will allow you to enter additional configurations based on the selected format. For a detailed breakdown of these settings, refer to the [File Format section](#file-format-settings) below.
    3. Give a **Name** to the stream
    4. (Optional)—If you want to enforce a specific schema, you can enter a **Input schema**. By default, this value is set to `{}` and will automatically infer the schema from the file\(s\) you are replicating. For details on providing a custom schema, refer to the [User Schema section](#user-schema).
    5. Optionally, enter the **Globs** which dictates which files to be synced. This is a regular expression that allows Airbyte to pattern match the specific files to replicate. If you are replicating all the files within your bucket, use `**` as the pattern. For more precise pattern matching options, refer to the [Path Patterns section](#path-patterns) below.
-9. (Optional) Enter the endpoint to use for the data replication.
-10. (Optional) Enter the desired start date from which to begin replicating data.
+10. (Optional) Enter the endpoint to use for the data replication.
+11. (Optional) Enter the desired start date from which to begin replicating data.
+<!-- /env:cloud -->
 
-## Supported Streams
+<!-- env:oss -->
+### For Airbyte Open Source:
 
-The Azure Blob Storage source connector supports the following [sync modes](https://docs.airbyte.com/cloud/core-concepts#connection-sync-modes):
+1. Navigate to the Airbyte Open Source dashboard.
+2. Click Sources and then click + New source.
+3. On the Set up the source page, select Azure Blob Storage from the Source type dropdown.
+4. Enter a name for the Azure Blob Storage connector.
+5. Enter the name of your Azure **Storage Account** and **container**.
+6. Choose the Authentication method.
+   1. If you are accessing through a Storage Account Key, choose `Authenticate via Storage Account Key` and enter the key.
+   1. If you are accessing through a Service Principal, choose the `Authenticate via Client Credentials`.
+     0. See [above](#step-1-set-up-azure-blob-storage) regarding setting IAM role bindings for the Service Principal and getting detail of the app registration
+     1. Enter the `Directory (tenant) ID` value from app registration in Azure Portal into the `Tenant ID` field.
+     2. Enter the `Application (client) ID` from Azure Portal into the `Tenant ID` field. Note this is **not** the secret ID
+     3. Enter the Secret `Value` from Azure Portal into the `Client Secret` field.
+9. Add a stream
+   1. Write the **File Type**
+   2. In the **Format** box, use the dropdown menu to select the format of the files you'd like to replicate. The supported formats are **CSV**, **Parquet**, **Avro** and **JSONL**. Toggling the **Optional fields** button within the **Format** box will allow you to enter additional configurations based on the selected format. For a detailed breakdown of these settings, refer to the [File Format section](#file-format-settings) below.
+   3. Give a **Name** to the stream
+   4. (Optional)—If you want to enforce a specific schema, you can enter a **Input schema**. By default, this value is set to `{}` and will automatically infer the schema from the file\(s\) you are replicating. For details on providing a custom schema, refer to the [User Schema section](#user-schema).
+   5. Optionally, enter the **Globs** which dictates which files to be synced. This is a regular expression that allows Airbyte to pattern match the specific files to replicate. If you are replicating all the files within your bucket, use `**` as the pattern. For more precise pattern matching options, refer to the [Path Patterns section](#path-patterns) below.
+10. (Optional) Enter the endpoint to use for the data replication.
+11. (Optional) Enter the desired start date from which to begin replicating data.
+<!-- /env:oss -->
+
+## Supported sync modes
+
+The Azure Blob Storage source connector supports the following [sync modes](https://docs.airbyte.com/cloud/core-concepts/#connection-sync-modes):
 
 | Feature                                        | Supported? |
 | :--------------------------------------------- | :--------- |
@@ -88,6 +137,8 @@ The Azure Blob Storage source connector supports the following [sync modes](http
 | Replicate Multiple Files \(pattern matching\)  | Yes        |
 | Replicate Multiple Streams \(distinct tables\) | Yes        |
 | Namespaces                                     | No         |
+
+## Supported Streams
 
 ### File Compressions
 
@@ -245,22 +296,30 @@ The Azure Blob Storage connector should not encounter any [Microsoft API limitat
 
 ## Changelog
 
+<details>
+  <summary>Expand to review</summary>
+
 | Version | Date       | Pull Request                                             | Subject                                                                                      |
-| :------ | :--------- | :------------------------------------------------------- | :------------------------------------------------------------------------------------------- |
-| 0.4.2   | 2024-04-23 | [37504](https://github.com/airbytehq/airbyte/pull/37504) | Update specification                                                                         |
-| 0.4.1   | 2024-04-22 | [37467](https://github.com/airbytehq/airbyte/pull/37467) | Fix start date filter                                                                        |
-| 0.4.0   | 2024-04-05 | [36825](https://github.com/airbytehq/airbyte/pull/36825) | Add oauth 2.0 support                                                                        |
-| 0.3.6   | 2024-04-03 | [36542](https://github.com/airbytehq/airbyte/pull/36542) | Use Latest CDK; add integration tests                                                        |
-| 0.3.5   | 2024-03-26 | [36487](https://github.com/airbytehq/airbyte/pull/36487) | Manage dependencies with Poetry.                                                             |
-| 0.3.4   | 2024-02-06 | [34936](https://github.com/airbytehq/airbyte/pull/34936) | Bump CDK version to avoid missing SyncMode errors                                            |
-| 0.3.3   | 2024-01-30 | [34681](https://github.com/airbytehq/airbyte/pull/34681) | Unpin CDK version to make compatible with the Concurrent CDK                                 |
-| 0.3.2   | 2024-01-30 | [34661](https://github.com/airbytehq/airbyte/pull/34661) | Pin CDK version until upgrade for compatibility with the Concurrent CDK                      |
-| 0.3.1   | 2024-01-10 | [34084](https://github.com/airbytehq/airbyte/pull/34084) | Fix bug for running check with document file format                                          |
-| 0.3.0   | 2023-12-14 | [33411](https://github.com/airbytehq/airbyte/pull/33411) | Bump CDK version to auto-set primary key for document file streams and support raw txt files |
-| 0.2.5   | 2023-12-06 | [33187](https://github.com/airbytehq/airbyte/pull/33187) | Bump CDK version to hide source-defined primary key                                          |
-| 0.2.4   | 2023-11-16 | [32608](https://github.com/airbytehq/airbyte/pull/32608) | Improve document file type parser                                                            |
-| 0.2.3   | 2023-11-13 | [32357](https://github.com/airbytehq/airbyte/pull/32357) | Improve spec schema                                                                          |
-| 0.2.2   | 2023-10-30 | [31904](https://github.com/airbytehq/airbyte/pull/31904) | Update CDK to support document file types                                                    |
-| 0.2.1   | 2023-10-18 | [31543](https://github.com/airbytehq/airbyte/pull/31543) | Base image migration: remove Dockerfile and use the python-connector-base image              |
-| 0.2.0   | 2023-10-10 | https://github.com/airbytehq/airbyte/pull/31336          | Migrate to File-based CDK. Add support of CSV, Parquet and Avro files                        |
-| 0.1.0   | 2023-02-17 | https://github.com/airbytehq/airbyte/pull/23222          | Initial release with full-refresh and incremental sync with JSONL files                      |
+|:--------|:-----------|:---------------------------------------------------------|:---------------------------------------------------------------------------------------------|
+| 0.5.0 | 2025-01-02 | [50398](https://github.com/airbytehq/airbyte/pull/50398) | Add client_credentials auth for Azure Service Principals |
+| 0.4.4 | 2024-06-06 | [39275](https://github.com/airbytehq/airbyte/pull/39275) | [autopull] Upgrade base image to v1.2.2 |
+| 0.4.3 | 2024-05-29 | [38701](https://github.com/airbytehq/airbyte/pull/38701) | Avoid error on empty stream when running discover |
+| 0.4.2 | 2024-04-23 | [37504](https://github.com/airbytehq/airbyte/pull/37504) | Update specification |
+| 0.4.1 | 2024-04-22 | [37467](https://github.com/airbytehq/airbyte/pull/37467) | Fix start date filter |
+| 0.4.0 | 2024-04-05 | [36825](https://github.com/airbytehq/airbyte/pull/36825) | Add oauth 2.0 support |
+| 0.3.6 | 2024-04-03 | [36542](https://github.com/airbytehq/airbyte/pull/36542) | Use Latest CDK; add integration tests |
+| 0.3.5 | 2024-03-26 | [36487](https://github.com/airbytehq/airbyte/pull/36487) | Manage dependencies with Poetry. |
+| 0.3.4 | 2024-02-06 | [34936](https://github.com/airbytehq/airbyte/pull/34936) | Bump CDK version to avoid missing SyncMode errors |
+| 0.3.3 | 2024-01-30 | [34681](https://github.com/airbytehq/airbyte/pull/34681) | Unpin CDK version to make compatible with the Concurrent CDK |
+| 0.3.2 | 2024-01-30 | [34661](https://github.com/airbytehq/airbyte/pull/34661) | Pin CDK version until upgrade for compatibility with the Concurrent CDK |
+| 0.3.1 | 2024-01-10 | [34084](https://github.com/airbytehq/airbyte/pull/34084) | Fix bug for running check with document file format |
+| 0.3.0 | 2023-12-14 | [33411](https://github.com/airbytehq/airbyte/pull/33411) | Bump CDK version to auto-set primary key for document file streams and support raw txt files |
+| 0.2.5 | 2023-12-06 | [33187](https://github.com/airbytehq/airbyte/pull/33187) | Bump CDK version to hide source-defined primary key |
+| 0.2.4 | 2023-11-16 | [32608](https://github.com/airbytehq/airbyte/pull/32608) | Improve document file type parser |
+| 0.2.3 | 2023-11-13 | [32357](https://github.com/airbytehq/airbyte/pull/32357) | Improve spec schema |
+| 0.2.2 | 2023-10-30 | [31904](https://github.com/airbytehq/airbyte/pull/31904) | Update CDK to support document file types |
+| 0.2.1 | 2023-10-18 | [31543](https://github.com/airbytehq/airbyte/pull/31543) | Base image migration: remove Dockerfile and use the python-connector-base image |
+| 0.2.0 | 2023-10-10 | [31336](https://github.com/airbytehq/airbyte/pull/31336) | Migrate to File-based CDK. Add support of CSV, Parquet and Avro files |
+| 0.1.0 | 2023-02-17 | [23222](https://github.com/airbytehq/airbyte/pull/23222) | Initial release with full-refresh and incremental sync with JSONL files |
+
+</details>

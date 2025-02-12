@@ -5,6 +5,7 @@
 from typing import Any, List, Mapping
 
 import pendulum
+
 from airbyte_cdk.sources.declarative.yaml_declarative_source import YamlDeclarativeSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
@@ -38,12 +39,14 @@ class SourceSlack(YamlDeclarativeSource):
         end_date = end_date and pendulum.parse(end_date)
         threads_lookback_window = pendulum.Duration(days=config["lookback_window"])
         channel_filter = config.get("channel_filter", [])
+        include_private_channels = config.get("include_private_channels", False)
         threads = Threads(
             authenticator=authenticator,
             default_start_date=default_start_date,
             end_date=end_date,
             lookback_window=threads_lookback_window,
             channel_filter=channel_filter,
+            include_private_channels=include_private_channels,
         )
         return threads
 

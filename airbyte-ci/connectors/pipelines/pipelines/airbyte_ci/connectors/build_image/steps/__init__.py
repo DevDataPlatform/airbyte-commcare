@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import anyio
 from connector_ops.utils import ConnectorLanguage  # type: ignore
-from pipelines.airbyte_ci.connectors.build_image.steps import java_connectors, python_connectors
+from pipelines.airbyte_ci.connectors.build_image.steps import java_connectors, python_connectors, manifest_only_connectors
 from pipelines.airbyte_ci.connectors.build_image.steps.common import LoadContainerToLocalDockerHost, StepStatus
 from pipelines.airbyte_ci.connectors.context import ConnectorContext
 from pipelines.airbyte_ci.connectors.reports import ConnectorReport, Report
@@ -21,6 +21,7 @@ class NoBuildStepForLanguageError(Exception):
 LANGUAGE_BUILD_CONNECTOR_MAPPING = {
     ConnectorLanguage.PYTHON: python_connectors.run_connector_build,
     ConnectorLanguage.LOW_CODE: python_connectors.run_connector_build,
+    ConnectorLanguage.MANIFEST_ONLY: manifest_only_connectors.run_connector_build,
     ConnectorLanguage.JAVA: java_connectors.run_connector_build,
 }
 
@@ -49,7 +50,7 @@ async def run_connector_build_pipeline(context: ConnectorContext, semaphore: any
             per_platform_built_containers = build_result.output
             step_results.append(build_result)
             if context.is_local and build_result.status is StepStatus.SUCCESS:
-                load_image_result = await LoadContainerToLocalDockerHost(context, per_platform_built_containers, image_tag).run()
+                load_image_result = await LoadContainerToLocalDockerHost(context, image_tag).run(per_platform_built_containers)
                 step_results.append(load_image_result)
             report = ConnectorReport(context, step_results, name="BUILD RESULTS")
             context.report = report
